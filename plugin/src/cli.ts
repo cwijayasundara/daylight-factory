@@ -148,6 +148,10 @@ if (cmd === 'config') {
 } else if (cmd === 'touchpoints') {
   const { touchpoints } = await import('./metrics.ts'); const { auditFile } = await import('./lib/events.ts');
   console.log(JSON.stringify(touchpoints(auditFile(process.cwd()))));
+} else if (cmd === 'report') {
+  const { render } = await import('./report.ts'); const { auditFile } = await import('./lib/events.ts'); const { writeFileSync } = await import('node:fs');
+  const out = opt('out') ?? join(process.cwd(), '.daylight/report-' + rest[0] + '.html');
+  writeFileSync(out, render(auditFile(process.cwd(), rest[0]), rest[0], opt('repo'))); console.log(out);
 } else if (cmd === 'selfcheck' && rest[0] === 'no-codemode-var') {
   const hits = noCodeModeVar(PLUGIN);
   if (hits.length) fail('Code Mode variable referenced in: ' + hits.join(', '));
