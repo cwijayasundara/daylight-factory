@@ -31,7 +31,7 @@ export const effortFor = (t: Task, attempt: number, cfg: any) => (t.risky || att
 export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): Promise<'passed' | 'escalated'> {
   const file = auditFile(cwd);
   const wt = addWorktree(cwd, t.id);
-  append(file, { kind: 'x_task_start', phase: 'inner', task: t.id });
+  append(file, { kind: 'x_task_start', phase: 'inner', task: t.id, base: wt.base });
   if (!tddApplies(t)) append(file, { kind: 'x_tdd_waiver', phase: 'inner', task: t.id, reason: t.tdd === false ? 'planner marked the task as having no new behaviour' : 'config-only task: no code paths to test first' });
   let feedback = '', diff = '', prevComp: string[] | undefined;
   const rd = (p: string) => (existsSync(p) ? readFileSync(p, 'utf8') : '');
