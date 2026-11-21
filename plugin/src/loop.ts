@@ -14,7 +14,9 @@ export interface Sensor { ok: boolean; messages: string }
 export interface Opts { sensors?: (wt: string, t: Task) => Promise<Sensor>; evaluatorExtra?: (wt: string, t: Task) => Promise<string> }
 
 export const claude = (args: string[], cwd: string, env: Record<string, string> = {}) => new Promise<{ code: number; stdout: string; stderr: string }>((res) => {
-  const c = spawn(process.env.DAYLIGHT_CLAUDE || 'claude', args, { cwd, env: { ...process.env, ...env } });
+  const e = { ...process.env, ...env };
+  delete e[['CLAUDE_CODE', 'EXPERIMENTAL', 'CODE_MODE'].join('_')]; // every spawned claude -p is headless: Code Mode does not exist there (ADR-003)
+  const c = spawn(process.env.DAYLIGHT_CLAUDE || 'claude', args, { cwd, env: e });
   let stdout = '', stderr = '';
   c.stdout.on('data', (d) => (stdout += d)); c.stderr.on('data', (d) => (stderr += d));
   c.on('close', (code) => res({ code: code ?? -1, stdout, stderr }));

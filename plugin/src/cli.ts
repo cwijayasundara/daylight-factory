@@ -168,6 +168,16 @@ if (cmd === 'config') {
 } else if (cmd === 'monitor') {
   const D = await import('./deploy.ts'); const { resolveConfig } = await import('./config.ts');
   const f = D.monitor(process.cwd(), resolveConfig(process.cwd())); console.log(f ? 'regression task created: ' + f : 'healthy');
+} else if (cmd === 'reflect') {
+  const { reflect } = await import('./reflect.ts'); console.log(reflect(process.cwd(), opt('run') ?? (await import('./lib/events.ts')).runId()).length + ' lessons');
+} else if (cmd === 'dream') {
+  const D = await import('./dream.ts'); const { resolveConfig } = await import('./config.ts'); const cfg = resolveConfig(process.cwd());
+  if (rest[0] === 'schedule') { const line = D.scheduleEntry(process.cwd(), cfg, opt('repo') ?? process.cwd()); console.log(line); if (flag('crontab')) { const { spawnSync } = await import('node:child_process'); spawnSync('bash', ['-c', '(crontab -l 2>/dev/null; echo ' + JSON.stringify(line) + ') | crontab -']); } }
+  else console.log((await D.dreamRun(process.cwd(), cfg, { repo: opt('repo')!, targetDir: opt('target-dir') ?? 'plugin', base: opt('base') ?? 'main' })).msg);
+} else if (cmd === 'replay') {
+  const { replay } = await import('./replay.ts'); console.log(replay(opt('cases')!, Number(opt('n') ?? 3), opt('configs')!.split(',')));
+} else if (cmd === 'definition' && rest[0] === 'diff') {
+  const { definitionDiff } = await import('./definition.ts'); console.log(definitionDiff(process.cwd(), rest[1], rest[2]));
 } else if (cmd === 'selfcheck' && rest[0] === 'no-codemode-var') {
   const hits = noCodeModeVar(PLUGIN);
   if (hits.length) fail('Code Mode variable referenced in: ' + hits.join(', '));
