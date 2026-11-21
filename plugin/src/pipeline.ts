@@ -207,5 +207,8 @@ export function summarize(file: string, extra: object = {}) {
   }
   const dep = evs.find((e) => e.kind === 'x_deploy_result'), sm = [...evs].reverse().find((e) => e.kind === 'x_deploy' && e.stage === 'smoke');
   const gates = Object.fromEntries(['design', 'pr'].map((g) => [g, [...evs].reverse().find((e) => e.kind === 'gate' && e.gate === g && e.decision !== 'invalidated')?.source ?? null]));
-  return { phases, touchpoints: touchpoints(file).count, gates, deploy: { ok: !!dep?.ok }, smoke: { ok: !!sm?.ok }, ...extra };
+  const reviewed = (r: string) => evs.some((e) => e.kind === 'x_review' && e.review === r), prEv = [...evs].reverse().find((e) => e.kind === 'x_pr');
+  let url: string | null = null; try { url = prEv ? JSON.parse(prEv.out).url ?? null : null; } catch { /* PR output was not JSON */ }
+  const run = (extra as { run?: string }).run ?? evs[0]?.run;
+  return { phases, touchpoints: touchpoints(file).count, gates, deploy: { ok: !!dep?.ok }, smoke: { ok: !!sm?.ok }, pr: { url, branch: 'daylight/run-' + run, code_review: reviewed('code-review'), security_review: reviewed('security-review') }, ...extra };
 }

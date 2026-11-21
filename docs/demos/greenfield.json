@@ -13,103 +13,104 @@
       "cost_usd": 0
     },
     {
+      "phase": "preflight",
+      "seconds": 1.081,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
       "phase": "design",
-      "seconds": 98.785,
+      "seconds": 106.319,
       "tokens": {
         "claude-opus-5-5": {
-          "in": 58244,
-          "out": 8255
+          "in": 58416,
+          "out": 7431
         }
       },
-      "cost_usd": 0.7338204000000002
+      "cost_usd": 0.7118058
     },
     {
       "phase": "plan",
-      "seconds": 17.002,
+      "seconds": 18.284,
       "tokens": {
         "claude-sonnet-5-5": {
-          "in": 23564,
-          "out": 1677
+          "in": 24974,
+          "out": 1683
         }
       },
-      "cost_usd": 0.11939780000000001
+      "cost_usd": 0.1288425
     },
     {
       "phase": "inner",
-      "seconds": 227.49,
+      "seconds": 569.637,
       "tokens": {
         "claude-sonnet-5-5": {
-          "in": 61751,
-          "out": 15770
+          "in": 67343,
+          "out": 18424
         },
         "claude-opus-5-5": {
-          "in": 64443,
-          "out": 11663
+          "in": 71862,
+          "out": 12495
         }
       },
-      "cost_usd": 1.2487291000000003
+      "cost_usd": 1.3911500000000003
     },
     {
       "phase": "sensors",
-      "seconds": 0.661,
+      "seconds": 2.2,
       "tokens": {},
       "cost_usd": 0
     },
     {
       "phase": "trace",
-      "seconds": 0.773,
+      "seconds": 2.44,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "fix",
+      "seconds": 51.246,
       "tokens": {},
       "cost_usd": 0
     },
     {
       "phase": "judge",
-      "seconds": 20.402,
+      "seconds": 22.544,
       "tokens": {
         "claude-opus-5-5": {
-          "in": 15215,
-          "out": 1421
+          "in": 13838,
+          "out": 1226
         }
       },
-      "cost_usd": 0.1542024
+      "cost_usd": 0.1389276
     },
     {
       "phase": "review",
-      "seconds": 80.984,
+      "seconds": 53.45,
       "tokens": {},
       "cost_usd": 0
     },
     {
       "phase": "pr",
-      "seconds": 3.952,
+      "seconds": 6.168,
       "tokens": {},
       "cost_usd": 0
     },
     {
-      "phase": "gate2",
-      "seconds": 24.485,
-      "tokens": {
-        "claude-opus-5-5": {
-          "in": 25540,
-          "out": 1495
-        }
-      },
-      "cost_usd": 0.2681564
-    },
-    {
       "phase": "merge",
-      "seconds": 5.88,
+      "seconds": 4.114,
       "tokens": {},
       "cost_usd": 0
     },
     {
       "phase": "deploy",
-      "seconds": 3.231,
+      "seconds": 2.089,
       "tokens": {},
       "cost_usd": 0
     },
     {
       "phase": "reflect",
-      "seconds": 0.093,
+      "seconds": 0.095,
       "tokens": {},
       "cost_usd": 0
     }
@@ -125,7 +126,20 @@
   "smoke": {
     "ok": true
   },
-  "run": "gh2",
+  "pr": {
+    "url": "https://github.com/cwijayasundara/daylight-greenfield-sample/pull/3",
+    "branch": "daylight/run-gh3",
+    "code_review": true,
+    "security_review": true
+  },
+  "run": "gh3",
+  "command": "daylight run prd.md --agents",
+  "prd": "prd.md",
+  "design": [
+    "architecture.md",
+    "intent.md",
+    "spec.md"
+  ],
   "result": {
     "ok": true,
     "stage": "done",

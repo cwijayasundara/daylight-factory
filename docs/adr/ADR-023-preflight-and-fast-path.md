@@ -9,6 +9,6 @@
 - `lintPlan` (src/planlint.ts, `daylight plan lint`) runs inside the planner retry loop: dependencies exist and are acyclic, no protected paths, independent tasks have disjoint paths, and ACs about coverage, complexity, duplication, layering or advisories need the matching required sensor (a test cannot show them).
 - `generatorContext` (src/context.ts) puts the task's AC text, sensor limits and repository conventions in the first generator prompt.
 - The judge and both reviews run concurrently.
-- Fast path (`fast_path`, default true): triage size small and tier low skips the Opus design approver (lint still gates) and replaces the planner with a one-task plan (ADR-024 behaviour, same change set).
+- Fast path (`fast_path`, default true): triage size small and tier low skips the Opus design approver (lint still gates) and replaces the planner with a one-task plan.
 
 **Consequences** Failures that were environmental or plan-shaped now stop in seconds with a precise message. Tests: preflight, planlint, fastpath, pipeline. Open: preflight does not check that the container from a previous run is the one holding a port.

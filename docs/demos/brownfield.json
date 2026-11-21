@@ -2,87 +2,147 @@
   "phases": [
     {
       "phase": "triage",
-      "seconds": 0.001,
+      "seconds": 0.013000000000000001,
       "tokens": {},
       "cost_usd": 0
     },
     {
       "phase": "ingest",
-      "seconds": 0.014,
+      "seconds": 0.025,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "preflight",
+      "seconds": 2.966,
       "tokens": {},
       "cost_usd": 0
     },
     {
       "phase": "design",
-      "seconds": 114.068,
+      "seconds": 160.824,
       "tokens": {
         "claude-opus-5-5": {
-          "in": 62056,
-          "out": 9884
+          "in": 70410,
+          "out": 14898
         }
       },
-      "cost_usd": 0.8093314
+      "cost_usd": 0.9706598
     },
     {
       "phase": "plan",
-      "seconds": 20.207,
+      "seconds": 42.827,
       "tokens": {
         "claude-sonnet-5-5": {
-          "in": 24715,
-          "out": 2229
+          "in": 51637,
+          "out": 4459
         }
       },
-      "cost_usd": 0.1296011
+      "cost_usd": 0.28049349999999995
     },
     {
       "phase": "inner",
-      "seconds": 236.633,
+      "seconds": 780.0409999999999,
       "tokens": {
         "claude-sonnet-5-5": {
-          "in": 85230,
-          "out": 23248
+          "in": 193561,
+          "out": 38042
         },
         "claude-opus-5-5": {
-          "in": 76207,
-          "out": 13393
+          "in": 134116,
+          "out": 30634
         }
       },
-      "cost_usd": 1.5820891000000001
+      "cost_usd": 3.0764141
     },
     {
       "phase": "sensors",
-      "seconds": 5.503,
+      "seconds": 9.292,
       "tokens": {},
       "cost_usd": 0
     },
     {
       "phase": "trace",
-      "seconds": 3.567,
+      "seconds": 4.241,
       "tokens": {},
       "cost_usd": 0
     },
     {
       "phase": "fix",
-      "seconds": 109.955,
+      "seconds": 102.05799999999999,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "judge",
+      "seconds": 73.315,
+      "tokens": {
+        "claude-opus-5-5": {
+          "in": 46510,
+          "out": 3985
+        }
+      },
+      "cost_usd": 0.48446039999999996
+    },
+    {
+      "phase": "review",
+      "seconds": 173.329,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "pr",
+      "seconds": 5.339,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "merge",
+      "seconds": 4.557,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "deploy",
+      "seconds": 2.174,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "reflect",
+      "seconds": 0.097,
       "tokens": {},
       "cost_usd": 0
     }
   ],
-  "touchpoints": 0,
+  "touchpoints": 2,
   "gates": {
     "design": "agent",
-    "pr": null
+    "pr": "agent"
   },
   "deploy": {
-    "ok": false
+    "ok": true
   },
   "smoke": {
-    "ok": false
+    "ok": true
   },
-  "run": "bh6",
+  "pr": {
+    "url": "https://github.com/cwijayasundara/daylight-brownfield-sample/pull/5",
+    "branch": "daylight/run-bh8",
+    "code_review": true,
+    "security_review": true
+  },
+  "run": "bh8",
+  "command": "daylight run prd.md --agents (+ --resume x4 after harness fixes)",
+  "prd": "prd.md",
+  "design": [
+    "architecture.md",
+    "intent.md",
+    "spec.md"
+  ],
   "result": {
-    "ok": false,
-    "stage": "scope",
-    "msg": "tests/docker.test.ts changed by task t4 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore)\n"
+    "ok": true,
+    "stage": "done",
+    "msg": "deployed; deployed and smoke tests passed"
   }
 }
