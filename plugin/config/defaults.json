@@ -1,5 +1,6 @@
 {
   "design_dir": "docs/design",
+  "fast_path": true,
   "gates": {
     "design": {
       "approver": "human",

@@ -11,6 +11,9 @@
     "design_dir": {
       "type": "string"
     },
+    "fast_path": {
+      "type": "boolean"
+    },
     "gates": {
       "type": "object",
       "additionalProperties": false,

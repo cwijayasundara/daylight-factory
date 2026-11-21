@@ -10,11 +10,12 @@ import { normalize } from './workitem.ts';
 import { triage } from './triage.ts';
 import { extractJson } from './lib/json.ts';
 import { gate2, type Evidence } from './gate2.ts';
+import { preflight } from './preflight.ts';
 import { prdCheck } from './design.ts';
 import { ingest } from './ingest.ts';
 import { request, agentDecide, decide, verifyGate } from './gate.ts';
 import { load } from './state.ts';
-import { loadPlan } from './plan.ts';
+import { loadPlan, isFastPath, fastPlan } from './plan.ts';
 import { runInner, claude, parseResult } from './loop.ts';
 import { runFast } from './sensors.ts';
 import { classify } from './tiers.ts';
@@ -52,6 +53,7 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
   const prdErr = prdCheck(readFileSync(arg, 'utf8')); if (prdErr.length) return stop('triage', prdErr.join('; '));
   const t = await ph('triage', () => triage(wi, cfg, cwd)); if (t.route === 'human') return stop('triage', 'routed to a human: ' + t.rationale);
 
+  const fast = isFastPath(t, cfg); if (fast) append(f, { kind: 'x_fast_path', phase: 'triage', size: t.size, tier: t.tier });
   const ing = await ph('ingest', () => ingest(cwd, cfg, { auto: true }));
   append(f, { kind: 'x_ingest', phase: 'ingest', out: ing.out });
   const branchExists = git(cwd, ['rev-parse', '--verify', '-q', branch]).status === 0;
@@ -67,6 +69,12 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
     append(f, { kind: 'x_config_accept', phase: 'ingest', via: 'agent-profile', sensors: merged.sensors });
   }
 
+  if (!rs.phases.design) { // ADR-023: environment checks before any model is paid for
+    const brown = existsSync(join(cwd, '.daylight/ingest/conventions.md'));
+    const pf = await ph('preflight', () => preflight(cwd, cfg, { base: o.base, runSensors: (d) => (brown ? (() => { const r = runFast(d, cfg); return { ok: r.ok, messages: r.results.flatMap((x) => x.messages).join(' | ') }; })() : { ok: true, messages: '' }) }));
+    append(f, { kind: 'x_preflight', phase: 'preflight', ok: !pf.length, errors: pf });
+    if (pf.length) return stop('preflight', pf.join('\n'));
+  }
   const dir = join(cwd, cfg.design_dir);
   const designDone = !!rs.phases.design && existsSync(join(dir, 'spec.md')) && verifyGate(cwd, 'design', dir) === null;
   const design: any = designDone ? load(cwd).gates.design : await ph('design', async () => {
@@ -80,7 +88,8 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
       const l = cmd(['design', 'lint', '--dir', dir, '--prd', arg]);
       if (l.status !== 0) { feedback = l.stderr; continue; }
       request(cwd, 'design');
-      const err = agentDecide(cwd, 'design', dir, cfg); if (err) return stop('gate1', err);
+      if (fast) decide(cwd, 'design', { decision: 'approve', source: 'agent', feedback: '', scores: {}, dir, cap: cfg.retries.design, model: 'deterministic' }); // ADR-024: lint already passed; no Opus approver for small low-tier work
+      else { const err = agentDecide(cwd, 'design', dir, cfg); if (err) return stop('gate1', err); }
       const g = load(cwd).gates.design;
       if (g.status === 'approved') return g;
       if (g.status === 'escalated') return stop('gate1', 'design escalated to a human after ' + g.rejections + ' rejections');
@@ -93,7 +102,8 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
   mark('design'); { const s = stopIf('design'); if (s) return s; }
 
   const planDone = !!rs.phases.plan && existsSync(join(cwd, '.daylight/plan.json'));
-  if (!planDone) await ph('plan', async () => {
+  if (!planDone && fast) { mkdirSync(join(cwd, '.daylight'), { recursive: true }); writeFileSync(join(cwd, '.daylight/plan.json'), JSON.stringify(fastPlan(readFileSync(join(dir, 'spec.md'), 'utf8'), wi.title), null, 2)); }
+  else if (!planDone) await ph('plan', async () => {
     let err = '';
     for (let i = 0; i < 3; i++) {
       await ask('plan', cfg.models.triage, cfg.effort.generator_default,
