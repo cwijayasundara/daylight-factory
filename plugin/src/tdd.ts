@@ -22,7 +22,8 @@ export function waiverFor(cwd: string, task: string): string {
   return w ? w.reason : '';
 }
 export function recordRed(cwd: string, task: string, cmd: string, waive?: string): string | null {
-  const r = spawnSync('bash', ['-c', cmd], { cwd, encoding: 'utf8' });
+  const limit = Number(process.env.DAYLIGHT_CMD_TIMEOUT_S) || 120, r = spawnSync('bash', ['-c', cmd], { cwd, encoding: 'utf8', timeout: limit * 1000 });
+  if (r.error && (r.error as any).code === 'ETIMEDOUT') return 'test command timed out after ' + limit + 's: fix the hang (watch mode, open handles) before recording red';
   if (waive) {
     if (r.status !== 0) return 'tests fail: that is a real red, run without --waive';
     append(auditFile(cwd), { kind: 'x_tdd_waiver', phase: 'inner', task, declared: true, reason: waive, evidence: 'tests already pass' });

@@ -31,8 +31,10 @@ const shingles = (body: string) => { const t = body.match(/[\w$]+|[^\s\w]/g) ?? 
 const jaccard = (a: Set<string>, b: Set<string>) => { let n = 0; for (const x of a) if (b.has(x)) n++; return n / (a.size + b.size - n || 1); };
 const verLt = (a: string, b: string) => { const p = (v: string) => v.replace(/^[^\d]*/, '').split('.').map(Number); const [x, y] = [p(a), p(b)]; for (let i = 0; i < 3; i++) { if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) < (y[i] ?? 0); } return false; };
 
-function runCmd(name: string, cmd: string, cwd: string): Res {
-  const r = spawnSync('bash', ['-c', cmd], { cwd, encoding: 'utf8', timeout: 540000 });
+export const cmdTimeoutS = () => Number(process.env.DAYLIGHT_CMD_TIMEOUT_S) || 120;
+export function runCmd(name: string, cmd: string, cwd: string): Res {
+  const limit = cmdTimeoutS(), r = spawnSync('bash', ['-c', cmd], { cwd, encoding: 'utf8', timeout: limit * 1000 });
+  if (r.error && (r.error as any).code === 'ETIMEDOUT') return { name, ok: false, messages: [name + ' timed out after ' + limit + 's -> a hanging command is a failure: find what blocks (open handles, watch mode, network)'] };
   if (r.status === 0) return { name, ok: true, messages: [] };
   const tail = (r.stdout + r.stderr).trim().split('\n').slice(-6).join(' | ');
   return { name, ok: false, messages: [name + ' failed (exit ' + r.status + '): ' + tail + ' -> fix the failing ' + name + ' output above'] };

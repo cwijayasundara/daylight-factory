@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { git, addWorktree } from './worktree.ts';
 import { normalize } from './verdict.ts';
 import { extractJson } from './lib/json.ts';
-import { scopeViolations, repeatsPrevious } from './contract.ts';
+import { scopeViolations, repeatsPrevious, failureClass } from './contract.ts';
 import { tddCheck, waiverFor } from './tdd.ts';
 import { append, auditFile } from './lib/events.ts';
 import type { Task } from './plan.ts';
@@ -62,18 +62,27 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
     const eEffort = n >= 3 ? 'high' : cfg.effort.evaluator;
     append(file, { kind: 'x_dispatch', phase: 'inner', task: t.id, attempt: n, role: 'evaluator', model: cfg.models.evaluator, effort: eEffort });
     const evalArgs = (m: string) => ['-p', ep, '--agent', 'daylight:evaluator', '--model', m, '--effort', eEffort, '--plugin-dir', PLUGIN, '--output-format', 'json', '--allowedTools', 'Read,Grep,Glob'];
-    let evalModel = cfg.models.evaluator, degraded = false;
-    let e = await claude(evalArgs(evalModel), wt.path, { DAYLIGHT_AUDIT_ROOT: cwd, DAYLIGHT_RUN: process.env.DAYLIGHT_RUN ?? '' });
-    if ((e.code !== 0 || /usage limit|rate limit|overloaded|unavailable/i.test(e.stdout + e.stderr)) && cfg.models.evaluator_fallback !== evalModel) {
-      degraded = true; // ADR-016: loud, bounded fallback; never silent
-      append(file, { kind: 'degraded_evaluator', phase: 'inner', task: t.id, from: evalModel, to: cfg.models.evaluator_fallback, reason: (e.stderr || e.stdout).slice(0, 120) });
-      mkdirSync(join(cwd, '.daylight/state'), { recursive: true }); writeFileSync(join(cwd, '.daylight/state/degraded'), 'task ' + t.id + ' graded by ' + cfg.models.evaluator_fallback + '\n');
-      evalModel = cfg.models.evaluator_fallback; e = await claude(evalArgs(evalModel), wt.path, { DAYLIGHT_AUDIT_ROOT: cwd, DAYLIGHT_RUN: process.env.DAYLIGHT_RUN ?? '' });
+    const evaluate = async () => {
+      let evalModel = cfg.models.evaluator, degraded = false;
+      let e = await claude(evalArgs(evalModel), wt.path, { DAYLIGHT_AUDIT_ROOT: cwd, DAYLIGHT_RUN: process.env.DAYLIGHT_RUN ?? '' });
+      if ((e.code !== 0 || /usage limit|rate limit|overloaded|unavailable/i.test(e.stdout + e.stderr)) && cfg.models.evaluator_fallback !== evalModel) {
+        degraded = true; // ADR-016: loud, bounded fallback; never silent
+        append(file, { kind: 'degraded_evaluator', phase: 'inner', task: t.id, from: evalModel, to: cfg.models.evaluator_fallback, reason: (e.stderr || e.stdout).slice(0, 120) });
+        mkdirSync(join(cwd, '.daylight/state'), { recursive: true }); writeFileSync(join(cwd, '.daylight/state/degraded'), 'task ' + t.id + ' graded by ' + cfg.models.evaluator_fallback + '\n');
+        evalModel = cfg.models.evaluator_fallback; e = await claude(evalArgs(evalModel), wt.path, { DAYLIGHT_AUDIT_ROOT: cwd, DAYLIGHT_RUN: process.env.DAYLIGHT_RUN ?? '' });
+      }
+      const er = parseResult(e.stdout);
+      append(file, { kind: 'x_usage', phase: 'inner', task: t.id, role: 'evaluator', model: evalModel, usage: er.usage, cost_usd: er.cost });
+      let v: any;
+      try { v = normalize(extractJson(er.text)); } catch (err) { v = { effective: 'inconclusive', criteria: [], feedback: String((err as Error).message), unparseable: true }; }
+      return { v, evalModel, degraded };
+    };
+    let { v, evalModel, degraded } = await evaluate();
+    if (v.unparseable) { // re-ask once on an unparseable reply; an evaluator that still cannot answer is a failure, never a silent pass
+      append(file, { kind: 'x_evaluator_reask', phase: 'inner', task: t.id, attempt: n, reason: v.feedback });
+      ({ v, evalModel, degraded } = await evaluate());
+      if (v.unparseable) v = { ...v, effective: 'fail', feedback: 'the evaluator returned no usable verdict twice: ' + v.feedback, harness: true };
     }
-    const er = parseResult(e.stdout);
-    append(file, { kind: 'x_usage', phase: 'inner', task: t.id, role: 'evaluator', model: evalModel, usage: er.usage, cost_usd: er.cost });
-    let v: any;
-    try { v = normalize(extractJson(er.text)); } catch (err) { v = { effective: 'inconclusive', criteria: [], feedback: String((err as Error).message) }; }
     const effective = computational.length ? 'fail' : v.effective; // ADR-002: computational failures are never overridden
     append(file, { kind: 'verdict', phase: 'inner', role: 'evaluator', task: t.id, attempt: n, verdict: effective, evaluator_verdict: v.effective, model: evalModel, degraded, citations: v.citations ?? [], computational });
     if (effective !== 'fail') { append(file, { kind: 'x_task_end', phase: 'inner', task: t.id, status: 'passed', attempts: n }); return 'passed'; }
@@ -81,7 +90,7 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
   }
   mkdirSync(join(cwd, '.daylight/escalations'), { recursive: true });
   writeFileSync(join(cwd, '.daylight/escalations', t.id + '.md'), '# Escalation: task ' + t.id + '\n\n' + t.title + '\n\nRetry cap (' + cfg.retries.task + ') reached after ' + attempts + ' attempts.\n\n## Last cited feedback\n' + feedback + '\n\n## Branch\n' + wt.branch + ' (' + wt.path + ')\n');
-  append(file, { kind: 'x_escalation', phase: 'inner', task: t.id, reason: 'retry_cap', route: 'human' });
+  append(file, { kind: 'x_escalation', phase: 'inner', task: t.id, reason: 'retry_cap', route: 'human', failure_class: failureClass(feedback.split('\n')) });
   append(file, { kind: 'x_task_end', phase: 'inner', task: t.id, status: 'escalated', attempts });
   return 'escalated';
 }

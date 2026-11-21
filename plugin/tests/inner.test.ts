@@ -170,3 +170,21 @@ test('AC-48 TDD, SOLID and SRP guides exist as rules and as skill text', () => {
   const skill = readFileSync(join(PLUGIN, 'skills/tdd-guides/SKILL.md'), 'utf8');
   for (const w of ['TDD', 'SOLID', 'SRP']) assert.match(skill, new RegExp(w));
 });
+
+const garbageStub = (d: string, always: boolean) => {
+  const body = '#!/bin/bash\nif [[ "$*" == *daylight:evaluator* ]]; then\n  echo x >> "$0.n"\n  if ' + (always ? 'true' : '[ "$(wc -l < "$0.n")" -le 1 ]') + '; then echo \'{"result":"I could not decide"}\'; else echo \'{"result":"{\\"verdict\\":\\"pass\\",\\"criteria\\":[]}"}\'; fi\nelse mkdir -p src; echo x > "src/gen-$$.txt"; echo \'{"result":"done"}\'; fi\n';
+  const s = put(d, '../garbage-' + Math.random().toString(36).slice(2), body); chmodSync(s, 0o755); return s;
+};
+test('ADR-021 an unparseable evaluator reply is re-asked once and then used', () => {
+  const { d } = repo(1); plan(d, [T('t1')]);
+  const s = garbageStub(d, false);
+  const r = cli(['inner', 'run', '--plan', join(d, 'plan.json')], { cwd: d, env: { DAYLIGHT_CLAUDE: s, DAYLIGHT_RUN: 'r1' } });
+  assert.equal(r.out.length > 0, true, r.err); assert.equal(JSON.parse(r.out).t1, 'passed', r.err);
+  assert.equal(events(d).filter((e) => e.kind === 'x_evaluator_reask').length, 1);
+});
+test('ADR-021 an evaluator that is unparseable twice fails the task instead of passing it', () => {
+  const { d } = repo(1); plan(d, [T('t1')]);
+  const s = garbageStub(d, true);
+  const r = cli(['inner', 'run', '--plan', join(d, 'plan.json')], { cwd: d, env: { DAYLIGHT_CLAUDE: s, DAYLIGHT_RUN: 'r1' } });
+  assert.equal(JSON.parse(r.out).t1, 'escalated');
+});

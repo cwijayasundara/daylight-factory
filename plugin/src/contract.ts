@@ -15,3 +15,5 @@ export function scopeViolations(files: string[], t: Pick<Task, 'id' | 'paths' | 
 }
 /** True when the previous attempt failed with at least one identical computational message. */
 export const repeatsPrevious = (prev: string[] | undefined, now: string[]) => !!prev && now.some((m) => prev.includes(m));
+/** Who must act on a failure: the harness (fix the tooling) or the generator (retry with feedback). */
+export const failureClass = (messages: string[]): 'harness' | 'generator' => (messages.some((m) => /timed out after|returned no usable verdict/.test(m)) ? 'harness' : 'generator');
