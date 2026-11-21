@@ -9,7 +9,12 @@ export function addWorktree(cwd: string, id: string) {
   if (existsSync(ex) && !readFileSync(ex, 'utf8').includes('.daylight/')) appendFileSync(ex, '\n.daylight/\n');
   const path = join(cwd, '.daylight/worktrees', id);
   const base = git(cwd, ['rev-parse', 'HEAD']).stdout.trim();
-  if (!existsSync(path)) { const r = git(cwd, ['worktree', 'add', '-q', '-b', 'daylight/' + id, path, 'HEAD']); if (r.status !== 0) throw new Error('worktree failed: ' + r.stderr); }
+  if (!existsSync(path)) {
+    git(cwd, ['worktree', 'prune']);
+    const exists = git(cwd, ['rev-parse', '--verify', '-q', 'daylight/' + id]).status === 0; // resume: reattach to the task's existing branch
+    const r = git(cwd, exists ? ['worktree', 'add', '-q', path, 'daylight/' + id] : ['worktree', 'add', '-q', '-b', 'daylight/' + id, path, 'HEAD']);
+    if (r.status !== 0) throw new Error('worktree failed: ' + r.stderr);
+  }
   if (existsSync(join(cwd, 'node_modules')) && !existsSync(join(path, 'node_modules'))) symlinkSync(join(cwd, 'node_modules'), join(path, 'node_modules'));
   return { path, branch: 'daylight/' + id, base };
 }

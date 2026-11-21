@@ -1,5 +1,6 @@
 // Reuses: every Daylight module (this is only the sequencing, G16), claude -p for authoring/approvals, git, docker via deploy.ts.
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,7 +10,7 @@ import { normalize } from './workitem.ts';
 import { triage } from './triage.ts';
 import { prdCheck } from './design.ts';
 import { ingest } from './ingest.ts';
-import { request, agentDecide, decide } from './gate.ts';
+import { request, agentDecide, decide, verifyGate } from './gate.ts';
 import { load } from './state.ts';
 import { loadPlan } from './plan.ts';
 import { runInner, claude, parseResult } from './loop.ts';
@@ -23,8 +24,19 @@ const PLUGIN = join(dirname(fileURLToPath(import.meta.url)), '..'), CLI = join(P
 const authorTools = 'Read,Write,Edit,Glob,Grep,Bash';
 export interface Result { ok: boolean; stage: string; msg: string }
 
-export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base: string; agents: boolean }): Promise<Result> {
+export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base: string; agents: boolean; resume?: boolean; stopAfter?: string }): Promise<Result> {
   const f = auditFile(cwd), run = runId(), branch = 'daylight/run-' + run;
+  // ADR-020: coarse checkpoints (design, plan, inner) in .daylight/run-state.json so a retry resumes instead of restarting from design
+  const rsFile = join(cwd, '.daylight/run-state.json');
+  const oldRs = existsSync(rsFile) ? JSON.parse(readFileSync(rsFile, 'utf8')) : null;
+  if (oldRs?.run === run && o.base.startsWith('daylight/run-')) o = { ...o, base: oldRs.base }; // resumed from inside the run branch: the real base is recorded
+  const input = createHash('sha256').update(readFileSync(arg, 'utf8') + '\n' + o.base).digest('hex');
+  let rs: any = { run, base: o.base, input, phases: {}, tasks: {} };
+  if (o.resume && oldRs?.run === run) { if (oldRs.input === input) rs = oldRs; else append(f, { kind: 'x_resume_invalid', phase: 'resume', reason: 'PRD or base changed; checkpoints discarded' }); }
+  const save = () => { mkdirSync(dirname(rsFile), { recursive: true }); writeFileSync(rsFile, JSON.stringify(rs, null, 2)); };
+  const mark = (n: string) => { rs.phases[n] = true; save(); };
+  const stopIf = (n: string): Result | null => (o.stopAfter === n ? { ok: true, stage: n, msg: 'stopped after ' + n } : null);
+  save();
   const cmd = (args: string[]) => spawnSync('node', [CLI, ...args], { cwd, encoding: 'utf8' });
   const ph = async <T>(name: string, fn: () => Promise<T> | T): Promise<T> => { append(f, { kind: 'phase', name, phase: name, status: 'start' }); const r = await fn(); append(f, { kind: 'phase', name, phase: name, status: 'end' }); return r; };
   const stop = (stage: string, msg: string): Result => { append(f, { kind: 'x_stop_run', phase: stage, msg }); return { ok: false, stage, msg }; };
@@ -39,7 +51,9 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
 
   const ing = await ph('ingest', () => ingest(cwd, cfg, { auto: true }));
   append(f, { kind: 'x_ingest', phase: 'ingest', out: ing.out });
-  git(cwd, ['checkout', '-q', '-b', branch]); // everything below is committed on the run branch, so the base stays identical to its remote
+  const branchExists = git(cwd, ['rev-parse', '--verify', '-q', branch]).status === 0;
+  if (branchExists && !o.resume) return stop('start', 'branch ' + branch + ' already exists for this run id; use --resume to continue it, or set a new DAYLIGHT_RUN');
+  git(cwd, branchExists ? ['checkout', '-q', branch] : ['checkout', '-q', '-b', branch]); // everything below is committed on the run branch, so the base stays identical to its remote
   const proposed = join(cwd, '.daylight/ingest/daylight.proposed.yaml');
   if (existsSync(proposed) && existsSync(join(cwd, 'daylight.yaml'))) {
     // AC-33: proposals are not applied until accepted. With agent approvers the operator profile accepts the sensor section; existing operator keys win.
@@ -51,7 +65,8 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
   }
 
   const dir = join(cwd, cfg.design_dir);
-  const design = await ph('design', async () => {
+  const designDone = !!rs.phases.design && existsSync(join(dir, 'spec.md')) && verifyGate(cwd, 'design', dir) === null;
+  const design: any = designDone ? load(cwd).gates.design : await ph('design', async () => {
     let feedback = '';
     for (let rev = 0; rev < cfg.retries.design; rev++) {
       const brown = existsSync(join(cwd, '.daylight/ingest/conventions.md'));
@@ -71,9 +86,11 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
     return stop('gate1', 'design not approved within the retry cap');
   });
   if ('ok' in design && design.ok === false) return design as Result;
-  git(cwd, ['add', '-A', cfg.design_dir, 'docs/wiki']); git(cwd, ['commit', '-q', '-m', 'daylight: approved design artefacts\n\nDaylight-Run: ' + run]);
+  if (!designDone) { git(cwd, ['add', '-A', cfg.design_dir, 'docs/wiki']); git(cwd, ['commit', '-q', '-m', 'daylight: approved design artefacts\n\nDaylight-Run: ' + run]); }
+  mark('design'); { const s = stopIf('design'); if (s) return s; }
 
-  await ph('plan', async () => {
+  const planDone = !!rs.phases.plan && existsSync(join(cwd, '.daylight/plan.json'));
+  if (!planDone) await ph('plan', async () => {
     let err = '';
     for (let i = 0; i < 3; i++) {
       await ask('plan', cfg.models.triage, cfg.effort.generator_default,
@@ -83,10 +100,12 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
     }
   });
   if (!existsSync(join(cwd, '.daylight/plan.json'))) return stop('plan', 'no plan produced');
+  mark('plan'); { const s = stopIf('plan'); if (s) return s; }
   const tasks = loadPlan(join(cwd, '.daylight/plan.json'));
 
-  const status = await ph('inner', () => runInner(cwd, tasks, cfg, { integrate: true, sensors: async (wt) => { const r = runFast(wt, cfg); return { ok: r.ok, messages: r.results.flatMap((x) => x.messages).join('\n') }; } }));
+  const status = rs.phases.inner ? Object.fromEntries(tasks.map((t) => [t.id, 'passed'])) : await ph('inner', () => runInner(cwd, tasks, cfg, { integrate: true, done: Object.keys(rs.tasks).filter((id) => rs.tasks[id] === 'passed'), onTask: (id: string, s: string) => { rs.tasks[id] = s; save(); }, sensors: async (wt) => { const r = runFast(wt, cfg); return { ok: r.ok, messages: r.results.flatMap((x) => x.messages).join('\n') }; } }));
   if (Object.values(status).some((s) => s !== 'passed')) return stop('inner', 'tasks not passed: ' + JSON.stringify(status));
+  mark('inner'); { const s = stopIf('inner'); if (s) return s; }
 
   const remote = git(cwd, ['remote']).stdout.trim() !== '';
   const planFile = join(cwd, '.daylight/plan.json');

@@ -11,7 +11,7 @@ import type { Task } from './plan.ts';
 
 const PLUGIN = join(dirname(fileURLToPath(import.meta.url)), '..');
 export interface Sensor { ok: boolean; messages: string }
-export interface Opts { integrate?: boolean; sensors?: (wt: string, t: Task) => Promise<Sensor>; evaluatorExtra?: (wt: string, t: Task) => Promise<string> }
+export interface Opts { done?: string[]; onTask?: (id: string, status: string) => void; integrate?: boolean; sensors?: (wt: string, t: Task) => Promise<Sensor>; evaluatorExtra?: (wt: string, t: Task) => Promise<string> }
 
 export const claude = (args: string[], cwd: string, env: Record<string, string> = {}) => new Promise<{ code: number; stdout: string; stderr: string }>((res) => {
   const e = { ...process.env, ...env };
@@ -77,7 +77,8 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
 
 export async function runInner(cwd: string, tasks: Task[], cfg: any, opts: Opts = {}) {
   const status: Record<string, string> = {};
-  let pending = [...tasks];
+  for (const id of opts.done ?? []) status[id] = 'passed'; // resume: tasks already passed and integrated
+  let pending = tasks.filter((t) => !status[t.id]);
   while (pending.length) {
     for (const t of pending) if (t.deps.some((d) => ['escalated', 'blocked'].includes(status[d]))) { status[t.id] = 'blocked'; }
     pending = pending.filter((t) => !status[t.id]);
@@ -85,6 +86,7 @@ export async function runInner(cwd: string, tasks: Task[], cfg: any, opts: Opts 
     if (!ready.length) break;
     await Promise.all(ready.map(async (t) => { status[t.id] = await runTask(cwd, t, cfg, opts); }));
     if (opts.integrate) for (const t of ready) if (status[t.id] === 'passed' && git(cwd, ['merge', '--no-edit', 'daylight/' + t.id]).status !== 0) { git(cwd, ['merge', '--abort']); status[t.id] = 'escalated'; }
+    for (const t of ready) opts.onTask?.(t.id, status[t.id]);
     pending = pending.filter((t) => !status[t.id]);
   }
   return status;

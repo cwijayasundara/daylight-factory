@@ -155,7 +155,7 @@ Run `daylight <command>` from the target repo. Common ones:
 
 | Command | What it does |
 |---|---|
-| `run <work-item> [--agents] [--base b] [--summary-out f]` | the whole factory, headless |
+| `run <work-item> [--agents] [--base b] [--resume] [--stop-after design|plan|inner] [--summary-out f]` | the whole factory, headless; `--resume` continues a run with the same `DAYLIGHT_RUN` from its checkpoints (ADR-020) |
 | `doctor [--json]` | Code Mode on/off/unknown, setup instructions; logs an event |
 | `config [--resolved] [--file f]` | validate / print merged config |
 | `workitem <prd|issue-url|task>`, `triage <item> [--paths a,b] [--base ref]` | normalise and classify |
