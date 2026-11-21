@@ -15,7 +15,7 @@ if [[ "$*" == *daylight:evaluator* ]]; then
     *) echo '{"result":"{\"verdict\":\"pass\",\"criteria\":[{\"id\":\"c1\",\"result\":\"pass\"}],\"feedback\":\"\"}"}';;
   esac
 else
-  sleep 0.4; echo x > "gen-$$.txt"; echo '{"result":"done","usage":{"input_tokens":10,"output_tokens":5}}'
+  sleep 0.4; mkdir -p src; echo x > "src/gen-$$.txt"; echo '{"result":"done","usage":{"input_tokens":10,"output_tokens":5}}'
 fi
 `;
 function repo(retries = 1, extra = '') {
@@ -48,7 +48,7 @@ test('AC-37 each task runs in its own worktree branch; the main tree is untouche
   assert.equal(sh(d, "git status --porcelain -- . ':!plan.json'").stdout.trim(), '');
   assert.ok(readdirSync(d).every((f) => !f.startsWith('gen-')));
   assert.match(sh(d, 'git branch').stdout, /daylight\/t1/);
-  assert.ok(readdirSync(join(d, '.daylight/worktrees/t1')).some((f) => f.startsWith('gen-')));
+  assert.ok(readdirSync(join(d, '.daylight/worktrees/t1/src')).some((f) => f.startsWith('gen-')));
 });
 test('AC-38 evaluator rejects a first commit with implementation but no failing test; AC tags required', () => {
   const d = tmp(); put(d, 'README.md', 'x');

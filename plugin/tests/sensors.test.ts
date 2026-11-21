@@ -67,18 +67,18 @@ test('AC-55 slow sensors run in the background and are never one long wait', () 
   const cap = cli(['config', '--check', '--file', put(d, 'x.yaml', MIN_YAML + 'sensors:\n  slow_timeout_s: 600\n')], { cwd: d });
   assert.notEqual(cap.code, 0);
 });
-test('AC-56 a computational failure cannot be overridden by an evaluator pass', () => {
+test('AC-56 a computational failure is final: the evaluator is skipped and cannot override it', () => {
   const d = proj('  required: [tests]\n  commands:\n    tests: "false"\n', {}, 'retries:\n  task: 1\n');
   put(d, 'README.md', 'x'); put(d, 'plan.json', JSON.stringify({ tasks: [{ id: 't1', title: 't', acs: ['AC-1'], paths: ['src/'], deps: [], tdd: false }] }));
   sh(d, 'git init -q -b main && git add -A && git -c user.name=t -c user.email=t@t commit -qm init');
   const stub = put(d, '../stub-pass-' + Math.random().toString(36).slice(2), String.raw`#!/bin/bash
-if [[ "$*" == *daylight:evaluator* ]]; then echo '{"result":"{\"verdict\":\"pass\",\"criteria\":[{\"id\":\"c\",\"result\":\"pass\"}],\"feedback\":\"\"}"}'; else echo x > gen-$$.txt; echo '{"result":"done"}'; fi
+if [[ "$*" == *daylight:evaluator* ]]; then echo '{"result":"{\"verdict\":\"pass\",\"criteria\":[{\"id\":\"c\",\"result\":\"pass\"}],\"feedback\":\"\"}"}'; else mkdir -p src; echo x > src/gen-$$.txt; echo '{"result":"done"}'; fi
 `);
   chmodSync(stub, 0o755);
   const r = cli(['inner', 'run', '--plan', join(d, 'plan.json')], { cwd: d, env: { DAYLIGHT_CLAUDE: stub, DAYLIGHT_RUN: 'r1' } });
   assert.equal(JSON.parse(r.out).t1, 'escalated');
   const v = events(d).find((e) => e.kind === 'verdict');
-  assert.equal(v.evaluator_verdict, 'pass'); assert.equal(v.verdict, 'fail');
+  assert.equal(v.verdict, 'fail'); assert.equal(v.evaluator_verdict, 'skipped'); // the evaluator is not even paid for when the contract already failed
 });
 const TESTS = "import test from 'node:test';\ntest('AC-1 one', () => {});\ntest('AC-2 two', () => { throw new Error('x'); });\n";
 test('AC-57 traceability matrix: AC -> tests -> result; unmapped or failing ACs fail the check', () => {

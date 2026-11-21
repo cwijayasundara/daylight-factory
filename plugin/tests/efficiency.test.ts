@@ -66,7 +66,7 @@ test('AC-89 passed-context size is logged per subagent and stays under the confi
   const d = tmp(); put(d, 'daylight.yaml', MIN_YAML + 'retries:\n  task: 1\ncontext:\n  budget_tokens: 12000\n'); put(d, 'README.md', 'x');
   sh(d, 'git init -q -b main && git add -A && git -c user.name=t -c user.email=t@t commit -qm init');
   put(d, 'plan.json', JSON.stringify({ tasks: [{ id: 't1', title: 't', acs: ['AC-1'], paths: ['src/'], deps: [], tdd: false }] }));
-  const stub = put(d, '../c-' + Math.random().toString(36).slice(2), "#!/bin/bash\nif [[ \"$*\" == *daylight:evaluator* ]]; then echo '{\"result\":\"{\\\"verdict\\\":\\\"pass\\\",\\\"criteria\\\":[]}\"}'; else echo x > g-$$.txt; echo '{\"result\":\"done\"}'; fi\n"); chmodSync(stub, 0o755);
+  const stub = put(d, '../c-' + Math.random().toString(36).slice(2), "#!/bin/bash\nif [[ \"$*\" == *daylight:evaluator* ]]; then echo '{\"result\":\"{\\\"verdict\\\":\\\"pass\\\",\\\"criteria\\\":[]}\"}'; else mkdir -p src; echo x > src/g-$$.txt; echo '{\"result\":\"done\"}'; fi\n"); chmodSync(stub, 0o755);
   cli(['inner', 'run', '--plan', join(d, 'plan.json')], { cwd: d, env: { ...env, DAYLIGHT_CLAUDE: stub } });
   const c = events(d).find((e) => e.kind === 'x_context');
   assert.ok(c.tokens > 0 && c.tokens < 12000); assert.equal(c.budget, 12000); assert.equal(c.over_budget, false);
@@ -92,7 +92,7 @@ test('AC-112 an unavailable evaluator falls back loudly: degraded event, degrade
   const d = tmp(); put(d, 'daylight.yaml', MIN_YAML + 'retries:\n  task: 1\n'); put(d, 'README.md', 'x');
   sh(d, 'git init -q -b main && git add -A && git -c user.name=t -c user.email=t@t commit -qm init');
   put(d, 'plan.json', JSON.stringify({ tasks: [{ id: 't1', title: 't', acs: ['AC-1'], paths: ['src/'], deps: [], tdd: false }] }));
-  const stub = put(d, '../c-' + Math.random().toString(36).slice(2), "#!/bin/bash\nif [[ \"$*\" == *daylight:evaluator* ]]; then if [[ \"$*\" == *claude-opus-5-5* ]]; then echo 'Claude usage limit reached' >&2; exit 1; fi; echo '{\"result\":\"{\\\"verdict\\\":\\\"pass\\\",\\\"criteria\\\":[]}\"}'; else echo x > g-$$.txt; echo '{\"result\":\"done\"}'; fi\n"); chmodSync(stub, 0o755);
+  const stub = put(d, '../c-' + Math.random().toString(36).slice(2), "#!/bin/bash\nif [[ \"$*\" == *daylight:evaluator* ]]; then if [[ \"$*\" == *claude-opus-5-5* ]]; then echo 'Claude usage limit reached' >&2; exit 1; fi; echo '{\"result\":\"{\\\"verdict\\\":\\\"pass\\\",\\\"criteria\\\":[]}\"}'; else mkdir -p src; echo x > src/g-$$.txt; echo '{\"result\":\"done\"}'; fi\n"); chmodSync(stub, 0o755);
   const r = cli(['inner', 'run', '--plan', join(d, 'plan.json')], { cwd: d, env: { ...env, DAYLIGHT_CLAUDE: stub } });
   assert.equal(JSON.parse(r.out).t1, 'passed');
   const ev = events(d);

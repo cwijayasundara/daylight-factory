@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { git, addWorktree } from './worktree.ts';
 import { normalize } from './verdict.ts';
 import { extractJson } from './lib/json.ts';
+import { scopeViolations, repeatsPrevious } from './contract.ts';
 import { tddCheck, waiverFor } from './tdd.ts';
 import { append, auditFile } from './lib/events.ts';
 import type { Task } from './plan.ts';
@@ -30,7 +31,7 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
   const wt = addWorktree(cwd, t.id);
   append(file, { kind: 'x_task_start', phase: 'inner', task: t.id });
   if (t.tdd === false) append(file, { kind: 'x_tdd_waiver', phase: 'inner', task: t.id, reason: 'planner marked the task as having no new behaviour' });
-  let feedback = '', diff = '';
+  let feedback = '', diff = '', prevComp: string[] | undefined;
   const attempts = 1 + cfg.retries.task;
   for (let n = 1; n <= attempts; n++) {
     const effort = effortFor(t, n, cfg);
@@ -44,8 +45,17 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
     git(wt.path, ['add', '-A']); git(wt.path, ['commit', '-q', '-m', 'daylight: ' + t.id + ' attempt ' + n]);
     diff = git(wt.path, ['diff', wt.base, 'HEAD']).stdout.slice(0, 20000);
     const computational: string[] = [];
+    computational.push(...scopeViolations(git(wt.path, ['diff', '--name-only', git(wt.path, ['merge-base', wt.base, 'HEAD']).stdout.trim() || wt.base, 'HEAD']).stdout.split('\n').filter(Boolean), t, cfg.guard?.protected_paths ?? []));
     if (t.tdd !== false) computational.push(...tddCheck(cwd, wt.base, wt.branch, t.id));
     if (opts.sensors) { const s = await opts.sensors(wt.path, t); if (!s.ok) computational.push(s.messages); }
+    if (computational.length) { // contract failed: the verdict is already fail (ADR-002), so skip the paid evaluator and feed the messages back
+      append(file, { kind: 'verdict', phase: 'inner', role: 'harness', task: t.id, attempt: n, verdict: 'fail', evaluator_verdict: 'skipped', computational });
+      const repeated = repeatsPrevious(prevComp, computational); prevComp = computational;
+      feedback = computational.join('\n');
+      if (repeated) { append(file, { kind: 'x_repeat_failure', phase: 'inner', task: t.id, attempt: n }); feedback += '\n(the same failure repeated on consecutive attempts)'; break; }
+      continue;
+    }
+    prevComp = undefined;
     const waiver = waiverFor(cwd, t.id);
     const extra = (opts.evaluatorExtra ? await opts.evaluatorExtra(wt.path, t) : '') + (waiver ? '\nThe generator declared a TDD waiver (its tests already pass): "' + waiver + '". Fail the task with a citation if the waiver is not credible (the diff adds behaviour that was not already tested).' : '');
     const ep = 'Evaluate task ' + t.id + ' against the evaluator-rubric skill.\nAC: ' + t.acs.join(', ') + '\n' + extra + '\n## Diff\n' + diff + '\nReply ONLY JSON {"verdict":"pass|fail","criteria":[{"id":"..","result":"pass|fail","cite":"file:line or test name"}],"feedback":".."}';

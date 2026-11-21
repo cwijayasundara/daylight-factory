@@ -85,7 +85,7 @@ test('AC-109 replay re-runs fixture specs under two configs and reports cost vs 
     sh(join(d, 'cases', c), 'git init -q -b main && git add -A && git -c user.name=t -c user.email=t@t commit -qm init');
   }
   put(d, 'a.yaml', MIN_YAML + 'models:\n  generator: claude-sonnet-5-5\n'); put(d, 'b.yaml', MIN_YAML + 'models:\n  generator: claude-haiku-5-5\neffort:\n  generator_default: low\n');
-  const stub = put(d, '../claude-rp-' + Math.random().toString(36).slice(2), "#!/bin/bash\nif [[ \"$*\" == *daylight:evaluator* ]]; then echo '{\"result\":\"{\\\"verdict\\\":\\\"pass\\\",\\\"criteria\\\":[]}\",\"total_cost_usd\":0.02}'; else echo x > g-$$.txt; echo '{\"result\":\"done\",\"total_cost_usd\":0.01}'; fi\n");
+  const stub = put(d, '../claude-rp-' + Math.random().toString(36).slice(2), "#!/bin/bash\nif [[ \"$*\" == *daylight:evaluator* ]]; then echo '{\"result\":\"{\\\"verdict\\\":\\\"pass\\\",\\\"criteria\\\":[]}\",\"total_cost_usd\":0.02}'; else mkdir -p src; echo x > src/g-$$.txt; echo '{\"result\":\"done\",\"total_cost_usd\":0.01}'; fi\n");
   chmodSync(stub, 0o755);
   const r = cli(['replay', '--cases', join(d, 'cases'), '--n', '2', '--configs', join(d, 'a.yaml') + ',' + join(d, 'b.yaml')], { cwd: d, env: { ...env, DAYLIGHT_CLAUDE: stub } });
   assert.equal(r.code, 0, r.err);
