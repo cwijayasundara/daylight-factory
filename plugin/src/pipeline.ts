@@ -8,6 +8,7 @@ import { parse, stringify } from 'yaml';
 import { deepMerge, resolveConfig } from './config.ts';
 import { normalize } from './workitem.ts';
 import { triage } from './triage.ts';
+import { extractJson } from './lib/json.ts';
 import { prdCheck } from './design.ts';
 import { ingest } from './ingest.ts';
 import { request, agentDecide, decide, verifyGate } from './gate.ts';
@@ -143,7 +144,7 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
     let d: any = { decision: 'reject', feedback: 'unparseable approver output' };
     await ph('gate2', async () => {
       const text = await ask('gate2', cfg.models.approver, 'high', 'Apply the pr-rubric skill (' + join(PLUGIN, 'skills/pr-rubric/SKILL.md') + ') to this PR. Body: .daylight/pr-body.md. Diff stat:\n' + git(cwd, ['diff', '--stat', o.base + '...HEAD']).stdout + '\nReply ONLY JSON {"decision":"approve|reject","scores":{},"feedback":""}', 'Read,Grep,Glob');
-      try { d = JSON.parse(text.replace(/^```(?:json)?\n?|```$/g, '')); } catch { /* keep reject */ }
+      try { d = extractJson(text); } catch { /* keep reject */ }
       decide(cwd, 'pr', { decision: d.decision, source: 'agent', feedback: d.feedback, scores: d.scores, dir, cap: cfg.retries.design, model: cfg.models.approver, head });
     });
     const st = load(cwd).gates.pr.status;

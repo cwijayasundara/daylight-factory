@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { claude, parseResult } from './loop.ts';
 import { normalize } from './verdict.ts';
+import { extractJson } from './lib/json.ts';
 import { git } from './worktree.ts';
 import { append, auditFile } from './lib/events.ts';
 import { loadPlan } from './plan.ts';
@@ -14,7 +15,7 @@ export async function judge(cwd: string, cfg: any, o: { spec: string; task?: str
   const r = await claude(['-p', prompt, '--agent', 'daylight:judge', '--model', cfg.models.judge, '--effort', cfg.effort.judge, '--plugin-dir', PLUGIN, '--output-format', 'json', '--allowedTools', 'Read,Grep,Glob'], cwd);
   const pr = parseResult(r.stdout);
   let v: any;
-  try { v = normalize(JSON.parse(pr.text.replace(/^```(?:json)?\n?|```$/g, ''))); } catch (e) { v = { effective: 'inconclusive', criteria: [], citations: [] }; }
+  try { v = normalize(extractJson(pr.text)); } catch (e) { v = { effective: 'inconclusive', criteria: [], citations: [] }; }
   const f = auditFile(cwd);
   append(f, { kind: 'verdict', phase: 'judge', role: 'judge', task: o.task ?? null, verdict: v.effective, model: cfg.models.judge, citations: v.citations });
   append(f, { kind: 'x_usage', phase: 'judge', model: cfg.models.judge, usage: pr.usage, cost_usd: pr.cost });

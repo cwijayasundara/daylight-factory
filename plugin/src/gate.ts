@@ -8,6 +8,7 @@ import { ARTEFACTS } from './design.ts';
 import { load, save, type GateState } from './state.ts';
 import { append, auditFile } from './lib/events.ts';
 import { gatePolicy } from './tiers.ts';
+import { extractJson } from './lib/json.ts';
 
 const PLUGIN = join(dirname(fileURLToPath(import.meta.url)), '..');
 const hashes = (dir: string) => Object.fromEntries(ARTEFACTS.map((f) => [f, createHash('sha256').update(existsSync(join(dir, f)) ? readFileSync(join(dir, f)) : '').digest('hex')]));
@@ -54,8 +55,8 @@ export function agentDecide(cwd: string, g: string, dir: string, cfg: any): stri
   if (r.status !== 0) return 'agent approver failed: ' + r.stderr;
   let out: any;
   try {
-    const res = JSON.parse(r.stdout), txt = String(res.result), m = txt.match(/\{[\s\S]*\}/); // tolerate prose or fences around the JSON
-    out = JSON.parse(m ? m[0] : txt);
+    const res = JSON.parse(r.stdout);
+    out = extractJson(String(res.result));
     append(auditFile(cwd), { kind: 'x_usage', phase: g, model, usage: res.usage ?? null, cost_usd: res.total_cost_usd ?? null });
   } catch { return 'agent approver returned unparseable output'; }
   return decide(cwd, g, { decision: out.decision, source: 'agent', feedback: out.feedback, scores: out.scores, dir, cap: cfg.retries.design, model });

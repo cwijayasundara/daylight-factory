@@ -5,6 +5,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { git, addWorktree } from './worktree.ts';
 import { normalize } from './verdict.ts';
+import { extractJson } from './lib/json.ts';
 import { tddCheck, waiverFor } from './tdd.ts';
 import { append, auditFile } from './lib/events.ts';
 import type { Task } from './plan.ts';
@@ -62,7 +63,7 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
     const er = parseResult(e.stdout);
     append(file, { kind: 'x_usage', phase: 'inner', task: t.id, role: 'evaluator', model: evalModel, usage: er.usage, cost_usd: er.cost });
     let v: any;
-    try { v = normalize(JSON.parse(er.text.replace(/^```(?:json)?\n?|```$/g, ''))); } catch (err) { v = { effective: 'inconclusive', criteria: [], feedback: String((err as Error).message) }; }
+    try { v = normalize(extractJson(er.text)); } catch (err) { v = { effective: 'inconclusive', criteria: [], feedback: String((err as Error).message) }; }
     const effective = computational.length ? 'fail' : v.effective; // ADR-002: computational failures are never overridden
     append(file, { kind: 'verdict', phase: 'inner', role: 'evaluator', task: t.id, attempt: n, verdict: effective, evaluator_verdict: v.effective, model: evalModel, degraded, citations: v.citations ?? [], computational });
     if (effective !== 'fail') { append(file, { kind: 'x_task_end', phase: 'inner', task: t.id, status: 'passed', attempts: n }); return 'passed'; }
