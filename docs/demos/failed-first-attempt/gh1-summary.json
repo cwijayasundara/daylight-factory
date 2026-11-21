@@ -1,0 +1,122 @@
+{
+  "phases": [
+    {
+      "phase": "triage",
+      "seconds": 0.002,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "ingest",
+      "seconds": 0.001,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "design",
+      "seconds": 108.315,
+      "tokens": {
+        "claude-opus-5-5": {
+          "in": 60606,
+          "out": 9528
+        }
+      },
+      "cost_usd": 0.7585608
+    },
+    {
+      "phase": "plan",
+      "seconds": 16.35,
+      "tokens": {
+        "claude-sonnet-5-5": {
+          "in": 23847,
+          "out": 1609
+        }
+      },
+      "cost_usd": 0.11987890000000001
+    },
+    {
+      "phase": "inner",
+      "seconds": 185.575,
+      "tokens": {
+        "claude-sonnet-5-5": {
+          "in": 85386,
+          "out": 23801
+        },
+        "claude-opus-5-5": {
+          "in": 78032,
+          "out": 16449
+        }
+      },
+      "cost_usd": 1.6711767
+    },
+    {
+      "phase": "sensors",
+      "seconds": 352.165,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "trace",
+      "seconds": 352.508,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "judge",
+      "seconds": 374.534,
+      "tokens": {
+        "claude-opus-5-5": {
+          "in": 50925,
+          "out": 4965
+        }
+      },
+      "cost_usd": 0.5243206
+    },
+    {
+      "phase": "fix",
+      "seconds": 328.57,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "review",
+      "seconds": 374.965,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "pr",
+      "seconds": 285.531,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "gate2",
+      "seconds": 309.185,
+      "tokens": {
+        "claude-opus-5-5": {
+          "in": 51446,
+          "out": 3737
+        }
+      },
+      "cost_usd": 0.537941
+    }
+  ],
+  "touchpoints": 0,
+  "gates": {
+    "design": "agent",
+    "pr": "agent"
+  },
+  "deploy": {
+    "ok": false
+  },
+  "smoke": {
+    "ok": false
+  },
+  "run": "gh1",
+  "result": {
+    "ok": false,
+    "stage": "gate2",
+    "msg": "Gate 2 still rejecting after 2 fix rounds: Verified fails. All sensors pass, but /code-review raised five 'important' findings and the branch fixes none of them. Checked at HEAD d615369: (1) src/app.ts:106 still writes the log line only from res.on('finish'), so aborted requests get no log line, which breaks AC-12's one line per request. (2) src/app.ts:113 still destroys the socket after a 413 without sending 'Connection: close', so keep-alive clients get ECONNRESET. (3) scripts/smoke.ts has no fetch timeout or AbortSignal, so it can hang forever against a stalled server, which breaks AC-17's rule to exit non-zero on failure. (4) readBody in src/app.ts does not listen for 'close' or 'aborted', so a request can leave the handler waiting forever. (5) src/server.ts:8 handles only SIGTERM, with no SIGINT handler and no closeIdleConnections. Fix all five, or explicitly mark each as not applying with a reason, then rerun sensors and review. Traceable: the matrix covers AC-1 to AC-18 and every AC shows PASS (AC-18 is listed out of order). Scoped: every changed path is inside a task path declared in plan.json. Honest: the body shows the earlier fail and inconclusive verdicts openly, and the final judge verdict is pass. But the fix2 evaluator result is still inconclusive. The body also does not say the important review findings were left open, and it should state that."
+  }
+}

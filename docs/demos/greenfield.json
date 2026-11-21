@@ -2,115 +2,133 @@
   "phases": [
     {
       "phase": "triage",
-      "seconds": 0.002,
+      "seconds": 0.001,
       "tokens": {},
       "cost_usd": 0
     },
     {
       "phase": "ingest",
-      "seconds": 0,
+      "seconds": 0.001,
       "tokens": {},
       "cost_usd": 0
     },
     {
       "phase": "design",
-      "seconds": 100.085,
+      "seconds": 98.785,
       "tokens": {
         "claude-opus-5-5": {
-          "in": 59199,
-          "out": 8675
+          "in": 58244,
+          "out": 8255
         }
       },
-      "cost_usd": 0.7535366
+      "cost_usd": 0.7338204000000002
     },
     {
       "phase": "plan",
-      "seconds": 18.691,
+      "seconds": 17.002,
       "tokens": {
         "claude-sonnet-5-5": {
-          "in": 24000,
-          "out": 1863
+          "in": 23564,
+          "out": 1677
         }
       },
-      "cost_usd": 0.1230366
+      "cost_usd": 0.11939780000000001
     },
     {
       "phase": "inner",
-      "seconds": 436.655,
+      "seconds": 227.49,
       "tokens": {
         "claude-sonnet-5-5": {
-          "in": 61110,
-          "out": 18147
+          "in": 61751,
+          "out": 15770
         },
         "claude-opus-5-5": {
-          "in": 51087,
-          "out": 10192
+          "in": 64443,
+          "out": 11663
         }
       },
-      "cost_usd": 1.142865
+      "cost_usd": 1.2487291000000003
     },
     {
       "phase": "sensors",
-      "seconds": 0.884,
+      "seconds": 0.661,
       "tokens": {},
       "cost_usd": 0
     },
     {
       "phase": "trace",
-      "seconds": 0.923,
+      "seconds": 0.773,
       "tokens": {},
       "cost_usd": 0
     },
     {
       "phase": "judge",
-      "seconds": 31.255,
+      "seconds": 20.402,
       "tokens": {
         "claude-opus-5-5": {
-          "in": 18071,
-          "out": 2310
+          "in": 15215,
+          "out": 1421
         }
       },
-      "cost_usd": 0.19904260000000001
+      "cost_usd": 0.1542024
     },
     {
       "phase": "review",
-      "seconds": 67.539,
+      "seconds": 80.984,
       "tokens": {},
       "cost_usd": 0
     },
     {
       "phase": "pr",
-      "seconds": 0.113,
+      "seconds": 3.952,
       "tokens": {},
       "cost_usd": 0
     },
     {
       "phase": "gate2",
-      "seconds": 21.803,
+      "seconds": 24.485,
       "tokens": {
         "claude-opus-5-5": {
-          "in": 25682,
-          "out": 1510
+          "in": 25540,
+          "out": 1495
         }
       },
-      "cost_usd": 0.2535768
+      "cost_usd": 0.2681564
+    },
+    {
+      "phase": "merge",
+      "seconds": 5.88,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "deploy",
+      "seconds": 3.231,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "reflect",
+      "seconds": 0.093,
+      "tokens": {},
+      "cost_usd": 0
     }
   ],
-  "touchpoints": 1,
+  "touchpoints": 0,
   "gates": {
     "design": "agent",
     "pr": "agent"
   },
   "deploy": {
-    "ok": false
+    "ok": true
   },
   "smoke": {
-    "ok": false
+    "ok": true
   },
-  "run": "gf3",
+  "run": "gh2",
   "result": {
-    "ok": false,
-    "stage": "gate2",
-    "msg": "Gate 2 not satisfied (a human decision is needed): {\"ok\":false,\"missing\":[\"Gate 2 is escalated (no recorded approval)\"],\"policy\":{\"tier\":\"medium\",\"agent_only\":true,\"human_required\":false,\"reason\":\"medium tier follows the configured policy\"}}\n"
+    "ok": true,
+    "stage": "done",
+    "msg": "deployed; deployed and smoke tests passed"
   }
 }

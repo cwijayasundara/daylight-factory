@@ -1,0 +1,70 @@
+{
+  "phases": [
+    {
+      "phase": "triage",
+      "seconds": 0.002,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "ingest",
+      "seconds": 0.017,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "design",
+      "seconds": 133.994,
+      "tokens": {
+        "claude-opus-5-5": {
+          "in": 66093,
+          "out": 12080
+        }
+      },
+      "cost_usd": 0.8987166
+    },
+    {
+      "phase": "plan",
+      "seconds": 16.388,
+      "tokens": {
+        "claude-sonnet-5-5": {
+          "in": 24488,
+          "out": 1524
+        }
+      },
+      "cost_usd": 0.1216631
+    },
+    {
+      "phase": "inner",
+      "seconds": 380.701,
+      "tokens": {
+        "claude-sonnet-5-5": {
+          "in": 91212,
+          "out": 20025
+        },
+        "claude-opus-5-5": {
+          "in": 81173,
+          "out": 19058
+        }
+      },
+      "cost_usd": 1.7345091000000004
+    }
+  ],
+  "touchpoints": 1,
+  "gates": {
+    "design": "agent",
+    "pr": null
+  },
+  "deploy": {
+    "ok": false
+  },
+  "smoke": {
+    "ok": false
+  },
+  "run": "bh3",
+  "result": {
+    "ok": false,
+    "stage": "inner",
+    "msg": "tasks not passed: {\"t1\":\"passed\",\"t3\":\"passed\",\"t4\":\"passed\",\"t2\":\"escalated\"}"
+  }
+}

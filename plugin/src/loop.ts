@@ -5,7 +5,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { git, addWorktree } from './worktree.ts';
 import { normalize } from './verdict.ts';
-import { tddCheck } from './tdd.ts';
+import { tddCheck, waiverFor } from './tdd.ts';
 import { append, auditFile } from './lib/events.ts';
 import type { Task } from './plan.ts';
 
@@ -34,7 +34,7 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
   for (let n = 1; n <= attempts; n++) {
     const effort = effortFor(t, n, cfg);
     const prompt = 'Task ' + t.id + ': ' + t.title + '\nAcceptance criteria: ' + t.acs.join(', ') + '\nAllowed paths: ' + t.paths.join(', ') +
-      '\nFollow TDD with separate commits: (1) write failing tests whose names contain their AC id, run: node ' + join(PLUGIN, 'src/cli.ts') + ' red --task ' + t.id + ' --cmd "' + (cfg.sensors.commands.tests ?? 'npm test') + '" (it must exit 0 = recorded red), then git add -A && git commit -m "test: ..."; (2) implement until green; commit. Stay in the allowed paths.' + (n > 1 ? '\n\n## Diff so far\n' + diff + '\n\n## Cited feedback to fix\n' + feedback : '');
+      '\nFollow TDD with separate commits: (1) write failing tests whose names contain their AC id, run: node ' + join(PLUGIN, 'src/cli.ts') + ' red --task ' + t.id + ' --cmd "' + (cfg.sensors.commands.tests ?? 'npm test') + '" (it must exit 0 = recorded red; if your new tests already pass because the behaviour exists, run the same command with --waive "<reason>" instead: the waiver is logged and the evaluator will judge it), then git add -A && git commit -m "test: ..."; (2) implement until green; commit. Stay in the allowed paths.' + (t.feedback ? '\n\n## Review findings to fix\n' + t.feedback : '') + (n > 1 ? '\n\n## Diff so far\n' + diff + '\n\n## Cited feedback to fix\n' + feedback : '');
     append(file, { kind: 'x_context', phase: 'inner', task: t.id, attempt: n, role: 'generator', tokens: Math.ceil(prompt.length / 4), chars: prompt.length, budget: cfg.context.budget_tokens, over_budget: Math.ceil(prompt.length / 4) > cfg.context.budget_tokens });
     append(file, { kind: 'x_dispatch', phase: 'inner', task: t.id, attempt: n, role: 'generator', model: cfg.models.generator, effort });
     const g = await claude(['-p', prompt, '--agent', 'daylight:generator', '--model', cfg.models.generator, '--effort', effort, '--plugin-dir', PLUGIN, '--output-format', 'json', '--allowedTools', 'Read,Write,Edit,Bash,Grep,Glob'], wt.path, { DAYLIGHT_ROLE: 'generator', DAYLIGHT_RUN: process.env.DAYLIGHT_RUN ?? '', DAYLIGHT_AUDIT_ROOT: cwd });
@@ -45,7 +45,8 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
     const computational: string[] = [];
     if (t.tdd !== false) computational.push(...tddCheck(cwd, wt.base, wt.branch, t.id));
     if (opts.sensors) { const s = await opts.sensors(wt.path, t); if (!s.ok) computational.push(s.messages); }
-    const extra = opts.evaluatorExtra ? await opts.evaluatorExtra(wt.path, t) : '';
+    const waiver = waiverFor(cwd, t.id);
+    const extra = (opts.evaluatorExtra ? await opts.evaluatorExtra(wt.path, t) : '') + (waiver ? '\nThe generator declared a TDD waiver (its tests already pass): "' + waiver + '". Fail the task with a citation if the waiver is not credible (the diff adds behaviour that was not already tested).' : '');
     const ep = 'Evaluate task ' + t.id + ' against the evaluator-rubric skill.\nAC: ' + t.acs.join(', ') + '\n' + extra + '\n## Diff\n' + diff + '\nReply ONLY JSON {"verdict":"pass|fail","criteria":[{"id":"..","result":"pass|fail","cite":"file:line or test name"}],"feedback":".."}';
     const eEffort = n >= 3 ? 'high' : cfg.effort.evaluator;
     append(file, { kind: 'x_dispatch', phase: 'inner', task: t.id, attempt: n, role: 'evaluator', model: cfg.models.evaluator, effort: eEffort });

@@ -94,7 +94,12 @@
       "daylight.yaml",
       "**/rubrics/**",
       "**/spec.md",
-      "**/sensors/**"
+      "**/sensors/**",
+      "**/eslint.config.*",
+      "**/.eslintrc*",
+      "**/tsconfig*.json",
+      "**/vitest.config.*",
+      "**/jest.config.*"
     ]
   }
 }

@@ -2,62 +2,68 @@
   "phases": [
     {
       "phase": "triage",
-      "seconds": 0.002,
+      "seconds": 0.001,
       "tokens": {},
       "cost_usd": 0
     },
     {
       "phase": "ingest",
-      "seconds": 0.016,
+      "seconds": 0.014,
       "tokens": {},
       "cost_usd": 0
     },
     {
       "phase": "design",
-      "seconds": 137.725,
+      "seconds": 114.068,
       "tokens": {
         "claude-opus-5-5": {
-          "in": 66827,
-          "out": 12564
+          "in": 62056,
+          "out": 9884
         }
       },
-      "cost_usd": 0.9034002000000001
+      "cost_usd": 0.8093314
     },
     {
       "phase": "plan",
-      "seconds": 15.883,
+      "seconds": 20.207,
       "tokens": {
         "claude-sonnet-5-5": {
-          "in": 24585,
-          "out": 1557
+          "in": 24715,
+          "out": 2229
         }
       },
-      "cost_usd": 0.1223921
+      "cost_usd": 0.1296011
     },
     {
       "phase": "inner",
-      "seconds": 425.53,
+      "seconds": 236.633,
       "tokens": {
         "claude-sonnet-5-5": {
-          "in": 72193,
-          "out": 21986
+          "in": 85230,
+          "out": 23248
         },
         "claude-opus-5-5": {
-          "in": 55646,
-          "out": 11247
+          "in": 76207,
+          "out": 13393
         }
       },
-      "cost_usd": 1.2794180000000002
+      "cost_usd": 1.5820891000000001
     },
     {
       "phase": "sensors",
-      "seconds": 6.322,
+      "seconds": 5.503,
       "tokens": {},
       "cost_usd": 0
     },
     {
       "phase": "trace",
-      "seconds": 5.03,
+      "seconds": 3.567,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "fix",
+      "seconds": 109.955,
       "tokens": {},
       "cost_usd": 0
     }
@@ -73,10 +79,10 @@
   "smoke": {
     "ok": false
   },
-  "run": "bf2",
+  "run": "bh6",
   "result": {
     "ok": false,
     "stage": "scope",
-    "msg": "src/main.ts changed by task t4 outside its declared paths (Dockerfile, docker-compose.yml, scripts/, tests/, package.json, .dockerignore)\n"
+    "msg": "tests/docker.test.ts changed by task t4 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore)\n"
   }
 }

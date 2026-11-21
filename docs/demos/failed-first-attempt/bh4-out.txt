@@ -1,0 +1,1 @@
+{"ok":false,"stage":"deploy","msg":"docker compose up failed: compose file \"/Users/cwijayasundaragmail.com/Documents/learning_101/run-brownfield4/docker-compose.yml\" is invalid: open /Users/cwijayasundaragmail.com/Documents/learning_101/run-brownfield4/docker-compose.yml: no such file or directory\n\n"}

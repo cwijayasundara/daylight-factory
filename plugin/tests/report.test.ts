@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { cli, tmp, hook, events } from './helpers.ts';
@@ -39,6 +39,13 @@ test('AC-16 one self-contained HTML file with no external network references', (
 test('AC-17 / AC-86 per phase: wall-clock, tokens per model, retries, sensors, verdicts, gates, touchpoints', () => {
   const { html } = run();
   for (const s of ['design', 'inner', 'sensors', 'judge', 'wall-clock', 'claude-sonnet-5-5', 'claude-opus-5-5', '1200', '300', '800', 'retries', 'tests: pass', 'lint: FAIL', 'design: approve (human)', 'Human touchpoints']) assert.ok(html.includes(s), s);
+});
+test('AC-86 phase wall-clock sums the segments of a phase that ran in several rounds, not first-start to last-end', () => {
+  const d = tmp(); const mkl = (ts: string, status: string) => JSON.stringify({ id: 'e', ts, run: 'r1', kind: 'phase', name: 'sensors', phase: 'sensors', status, sha_prev: 'x' });
+  const f = join(d, 'a.jsonl');
+  writeFileSync(f, [mkl('2026-01-01T00:00:00Z', 'start'), mkl('2026-01-01T00:00:10Z', 'end'), mkl('2026-01-01T01:00:00Z', 'start'), mkl('2026-01-01T01:00:05Z', 'end')].join('\n') + '\n');
+  const r = spawnSync('node', ['--input-type=module', '-e', "import {summarize} from '" + join(process.cwd(), 'src/pipeline.ts') + "'; console.log(JSON.stringify(summarize('" + f + "').phases[0]))"], { encoding: 'utf8' });
+  assert.equal(JSON.parse(r.stdout).seconds, 15);
 });
 test('AC-18 a REPL batch expands to its code and inner tool calls (escaped)', () => {
   const { html } = run();

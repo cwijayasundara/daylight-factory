@@ -39,6 +39,7 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
 
   const ing = await ph('ingest', () => ingest(cwd, cfg, { auto: true }));
   append(f, { kind: 'x_ingest', phase: 'ingest', out: ing.out });
+  git(cwd, ['checkout', '-q', '-b', branch]); // everything below is committed on the run branch, so the base stays identical to its remote
   const proposed = join(cwd, '.daylight/ingest/daylight.proposed.yaml');
   if (existsSync(proposed) && existsSync(join(cwd, 'daylight.yaml'))) {
     // AC-33: proposals are not applied until accepted. With agent approvers the operator profile accepts the sensor section; existing operator keys win.
@@ -48,7 +49,6 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
     Object.assign(cfg, resolveConfig(cwd));
     append(f, { kind: 'x_config_accept', phase: 'ingest', via: 'agent-profile', sensors: merged.sensors });
   }
-  git(cwd, ['checkout', '-q', '-b', branch]);
 
   const dir = join(cwd, cfg.design_dir);
   const design = await ph('design', async () => {
@@ -77,7 +77,7 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
     let err = '';
     for (let i = 0; i < 3; i++) {
       await ask('plan', cfg.models.triage, cfg.effort.generator_default,
-        'Read ' + join(dir, 'spec.md') + ' and (if present) .daylight/ingest/conventions.md. Write .daylight/plan.json: {"tasks":[{"id":"t1","title":"..","acs":["AC-1"],"paths":["src/","tests/"],"deps":[],"size":"small|medium|large","risky":false}]}. Rules: every AC in spec.md appears in some task; paths are repo-relative prefixes covering EVERY file the task creates or edits (source, tests, Dockerfile, compose, scripts, package.json); make tasks independent where possible, add deps only when a task needs another task\'s code; 3-5 tasks. Do NOT create a task that only adds tests for behaviour another task implements (its tests could never be red): every task implements behaviour AND its own failing-first tests; fold performance/logging/docs checks into the task that implements them. Only a task that has no new behaviour may set "tdd":false (this is logged as a waiver). Then run node ' + CLI + ' plan check --spec ' + join(dir, 'spec.md') + ' --plan .daylight/plan.json' + (err ? '\nFix: ' + err : ''), 'Read,Write,Edit,Glob,Grep,Bash');
+        'Read ' + join(dir, 'spec.md') + ' and (if present) .daylight/ingest/conventions.md. Write .daylight/plan.json: {"tasks":[{"id":"t1","title":"..","acs":["AC-1"],"paths":["src/","tests/"],"deps":[],"size":"small|medium|large","risky":false}]}. Rules: every AC in spec.md appears in some task; paths are repo-relative prefixes covering EVERY non-test file the task creates or edits (source, Dockerfile, compose, scripts, package.json); tests belonging to the task are always allowed; a task that wires into or edits a file another task creates must list that file in its paths and depend on that task; make tasks independent where possible, add deps only when a task needs another task\'s code; 3-5 tasks. Do NOT create a task that only adds tests for behaviour another task implements (its tests could never be red): every task implements behaviour AND its own failing-first tests; fold performance/logging/docs checks into the task that implements them. Only a task that has no new behaviour may set "tdd":false (this is logged as a waiver). Then run node ' + CLI + ' plan check --spec ' + join(dir, 'spec.md') + ' --plan .daylight/plan.json' + (err ? '\nFix: ' + err : ''), 'Read,Write,Edit,Glob,Grep,Bash');
       const c = cmd(['plan', 'check', '--spec', join(dir, 'spec.md'), '--plan', join(cwd, '.daylight/plan.json')]);
       if (c.status === 0) return; err = c.stderr;
     }
@@ -88,30 +88,55 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
   const status = await ph('inner', () => runInner(cwd, tasks, cfg, { integrate: true, sensors: async (wt) => { const r = runFast(wt, cfg); return { ok: r.ok, messages: r.results.flatMap((x) => x.messages).join('\n') }; } }));
   if (Object.values(status).some((s) => s !== 'passed')) return stop('inner', 'tasks not passed: ' + JSON.stringify(status));
 
-  const gate = await ph('sensors', () => { const r = runFast(cwd, cfg); return { ok: r.ok, msg: r.results.flatMap((x) => x.messages).join('\n') }; });
-  if (!gate.ok) return stop('sensors', gate.msg);
-  const tr = await ph('trace', () => cmd(['trace', '--spec', join(dir, 'spec.md')])); if (tr.status !== 0) return stop('trace', tr.stdout);
-  const sc = cmd(['scope', 'check', '--plan', join(cwd, '.daylight/plan.json'), '--base', o.base]); if (sc.status !== 0) return stop('scope', sc.stderr);
-  const j = await ph('judge', async () => { const r = spawnSync('node', [CLI, 'judge', '--spec', join(dir, 'spec.md'), '--task', 'run', '--base', o.base], { cwd, encoding: 'utf8' }); return r; });
-  if (j.status !== 0) return stop('judge', 'run judge veto: ' + j.stdout);
-  await ph('review', async () => { for (const k of ['code-review', 'security-review']) cmd(['review', 'capture', '--kind', k, '--target', branch]); });
-
-  const changed = git(cwd, ['diff', '--name-only', o.base + '...HEAD']).stdout.split('\n').filter(Boolean);
-  const tier = classify(changed, '', cfg).tier ?? 'low';
-  append(f, { kind: 'x_tier', phase: 'pr', tier, changed: changed.length });
-  const pr = await ph('pr', () => cmd(['pr', 'create', '--branch', branch, '--base', o.base, '--title', 'Daylight: ' + wi.title, '--local', '--no-push']));
-  if (pr.status !== 0) return stop('pr', pr.stderr);
-  const head = git(cwd, ['rev-parse', 'HEAD']).stdout.trim();
-  await ph('gate2', async () => {
-    const text = await ask('gate2', cfg.models.approver, 'high', 'Apply the pr-rubric skill (' + join(PLUGIN, 'skills/pr-rubric/SKILL.md') + ') to this PR. Body: .daylight/pr-body.md. Diff stat:\n' + git(cwd, ['diff', '--stat', o.base + '...HEAD']).stdout + '\nReply ONLY JSON {"decision":"approve|reject","scores":{},"feedback":""}', 'Read,Grep,Glob');
+  const remote = git(cwd, ['remote']).stdout.trim() !== '';
+  const planFile = join(cwd, '.daylight/plan.json');
+  const checks = async (): Promise<Result | null> => {
+    const noteFail = (r: Result | null) => { if (r) append(f, { kind: 'x_check', phase: r.stage, stage: r.stage, ok: false, msg: r.msg.slice(0, 400) }); return r; };
+    const gate = await ph('sensors', () => { const r = runFast(cwd, cfg); return { ok: r.ok, msg: r.results.flatMap((x) => x.messages).join('\n') }; });
+    if (!gate.ok) return noteFail({ ok: false, stage: 'sensors', msg: gate.msg });
+    const tr = await ph('trace', () => cmd(['trace', '--spec', join(dir, 'spec.md')])); if (tr.status !== 0) return noteFail({ ok: false, stage: 'trace', msg: tr.stdout });
+    const sc = cmd(['scope', 'check', '--plan', planFile, '--base', o.base]); if (sc.status !== 0) return { ok: false, stage: 'scope', msg: sc.stderr };
+    const j = await ph('judge', async () => spawnSync('node', [CLI, 'judge', '--spec', join(dir, 'spec.md'), '--task', 'run', '--base', o.base], { cwd, encoding: 'utf8' }));
+    if (j.status !== 0) return noteFail({ ok: false, stage: 'judge', msg: j.stdout });
+    await ph('review', async () => { for (const k of ['code-review', 'security-review']) cmd(['review', 'capture', '--kind', k, '--target', branch]); });
+    return null;
+  };
+  const reviewText = () => ['code-review', 'security-review'].map((k) => { const f = join(cwd, '.daylight/reviews', k + '.txt'); return existsSync(f) ? '## ' + k + '\n' + readFileSync(f, 'utf8').slice(0, 6000) : ''; }).join('\n');
+  const fixTask = async (round: number, feedback: string): Promise<boolean> => {
+    // ADR-019: a fix task is a normal task (generator + evaluator + sensors) fed the cited findings; broad paths, TDD waiver logged.
+    const t = { id: 'fix' + round, title: 'Address review findings (round ' + round + ')', acs: [] as string[], paths: ['src/', 'tests/', 'scripts/', 'docs/', 'package.json', 'README.md', 'Dockerfile', 'docker-compose.yml', '.dockerignore'], deps: [] as string[], size: 'medium' as const, tdd: false, feedback };
+    writeFileSync(planFile, JSON.stringify({ tasks: [...loadPlan(planFile), t] }, null, 2));
+    const s = await ph('fix', () => runInner(cwd, [t], cfg, { integrate: true, sensors: async (wt) => { const r = runFast(wt, cfg); return { ok: r.ok, messages: r.results.flatMap((x) => x.messages).join('\n') }; } }));
+    return s[t.id] === 'passed';
+  };
+  const rounds = Math.min(2, cfg.retries.design);
+  let tier: 'low' | 'medium' | 'high' = 'low', head = '', prDone = false;
+  for (let round = 0; round <= rounds; round++) {
+    const bad = await checks();
+    if (bad) { if (bad.stage === 'scope' || round === rounds) return stop(bad.stage, bad.msg); if (!(await fixTask(round + 1, bad.stage + ' failed:\n' + bad.msg))) return stop('fix', 'fix task not passed'); continue; }
+    const changed = git(cwd, ['diff', '--name-only', o.base + '...HEAD']).stdout.split('\n').filter(Boolean);
+    tier = classify(changed, '', cfg).tier ?? 'low';
+    append(f, { kind: 'x_tier', phase: 'pr', tier, changed: changed.length });
+    const pr = await ph('pr', () => (prDone ? cmd(['pr', 'update', '--branch', branch]) : cmd(['pr', 'create', '--branch', branch, '--base', o.base, '--title', 'Daylight: ' + wi.title, ...(remote ? [] : ['--local', '--no-push'])])));
+    if (pr.status !== 0) return stop('pr', pr.stderr);
+    prDone = true; append(f, { kind: 'x_pr', phase: 'pr', out: pr.stdout.trim().slice(0, 200) });
+    head = git(cwd, ['rev-parse', 'HEAD']).stdout.trim();
     let d: any = { decision: 'reject', feedback: 'unparseable approver output' };
-    try { d = JSON.parse(text.replace(/^```(?:json)?\n?|```$/g, '')); } catch { /* keep reject */ }
-    decide(cwd, 'pr', { decision: d.decision, source: 'agent', feedback: d.feedback, scores: d.scores, dir, cap: 1, model: cfg.models.approver, head });
-  });
+    await ph('gate2', async () => {
+      const text = await ask('gate2', cfg.models.approver, 'high', 'Apply the pr-rubric skill (' + join(PLUGIN, 'skills/pr-rubric/SKILL.md') + ') to this PR. Body: .daylight/pr-body.md. Diff stat:\n' + git(cwd, ['diff', '--stat', o.base + '...HEAD']).stdout + '\nReply ONLY JSON {"decision":"approve|reject","scores":{},"feedback":""}', 'Read,Grep,Glob');
+      try { d = JSON.parse(text.replace(/^```(?:json)?\n?|```$/g, '')); } catch { /* keep reject */ }
+      decide(cwd, 'pr', { decision: d.decision, source: 'agent', feedback: d.feedback, scores: d.scores, dir, cap: cfg.retries.design, model: cfg.models.approver, head });
+    });
+    const st = load(cwd).gates.pr.status;
+    if (st === 'escalated') return stop('gate2', 'Gate 2 escalated to a human after repeated rejections');
+    if (st === 'approved') break;
+    if (round === rounds) return stop('gate2', 'Gate 2 still rejecting after ' + rounds + ' fix rounds: ' + d.feedback);
+    if (!(await fixTask(round + 1, 'Gate 2 reviewer rejected:\n' + d.feedback + '\n' + reviewText()))) return stop('fix', 'fix task not passed');
+  }
   const sat = cmd(['gate', 'satisfied', 'pr', '--tier', tier, '--head', head]);
   if (sat.status !== 0) return stop('gate2', 'Gate 2 not satisfied (a human decision is needed): ' + sat.stdout);
   git(cwd, ['checkout', '-q', o.base]);
-  const mg = await ph('merge', () => cmd(['pr', 'merge', '--branch', branch, '--tier', tier, '--local']));
+  const mg = await ph('merge', () => cmd(['pr', 'merge', '--branch', branch, '--tier', tier, '--base', o.base, ...(remote ? [] : ['--local'])]));
   if (mg.status !== 0) return stop('merge', mg.stderr);
   const dep = await ph('deploy', () => cmd(['deploy', '--head', head]));
   append(f, { kind: 'x_deploy_result', phase: 'deploy', ok: dep.status === 0, out: (dep.stdout + dep.stderr).slice(-300) });
@@ -123,10 +148,11 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
 export function summarize(file: string, extra: object = {}) {
   const evs = loadEvents(file), phases: any[] = [];
   for (const name of [...new Set(evs.filter((e) => e.kind === 'phase').map((e) => e.name))]) {
-    const s = evs.find((e) => e.kind === 'phase' && e.name === name && e.status === 'start'), e = [...evs].reverse().find((x) => x.kind === 'phase' && x.name === name && x.status === 'end');
+    let seconds = 0, open = 0;
+    for (const x of evs.filter((e) => e.kind === 'phase' && e.name === name)) { if (x.status === 'start') open = Date.parse(x.ts); else if (open) { seconds += (Date.parse(x.ts) - open) / 1000; open = 0; } }
     const tokens: Record<string, { in: number; out: number }> = {};
     for (const u of evs.filter((x) => x.kind === 'x_usage' && x.phase === name)) { const t = (tokens[u.model] ??= { in: 0, out: 0 }); t.in += (u.usage?.input_tokens ?? 0) + (u.usage?.cache_creation_input_tokens ?? 0); t.out += u.usage?.output_tokens ?? 0; }
-    phases.push({ phase: name, seconds: e && s ? (Date.parse(e.ts) - Date.parse(s.ts)) / 1000 : 0, tokens, cost_usd: evs.filter((x) => x.kind === 'x_usage' && x.phase === name).reduce((a, x) => a + (x.cost_usd ?? 0), 0) });
+    phases.push({ phase: name, seconds, tokens, cost_usd: evs.filter((x) => x.kind === 'x_usage' && x.phase === name).reduce((a, x) => a + (x.cost_usd ?? 0), 0) });
   }
   const dep = evs.find((e) => e.kind === 'x_deploy_result'), sm = [...evs].reverse().find((e) => e.kind === 'x_deploy' && e.stage === 'smoke');
   const gates = Object.fromEntries(['design', 'pr'].map((g) => [g, [...evs].reverse().find((e) => e.kind === 'gate' && e.gate === g && e.decision !== 'invalidated')?.source ?? null]));

@@ -32,6 +32,23 @@ test('AC-62 the PR body carries matrix, sensor table, verdicts and both review o
   for (const s of ['## Traceability matrix', 'AC-1 one', '## Sensors', '| tests |', '## Evaluator verdicts', 'pass', '## /code-review', 'RAW code-review output', '## /security-review', 'RAW security-review output', 'Daylight-Run: r1']) assert.ok(body.includes(s), s);
   assert.match(readFileSync(r.out + '.args', 'utf8'), /--head daylight\/t1/);
 });
+test('AC-60 the PR body classifies review findings: blocking only with file, line and a reproducing command', () => {
+  const r = prRepo(); evidence(r.d);
+  const review = 'Findings:\n```json\n' + JSON.stringify([{ file: 'src/a.ts', line: 3, repro: 'npm test -- a', summary: 'crash on empty input', severity: 'important' }, { file: 'src/b.ts', line: 9, summary: 'slow path', severity: 'important' }]) + '\n```\n';
+  put(r.d, '.daylight/reviews/code-review.txt', review);
+  assert.equal(create(r).code, 0, create(r).err);
+  const body = readFileSync(r.out, 'utf8');
+  assert.match(body, /## Review findings[\s\S]*Blocking \(1\)[\s\S]*src\/a\.ts:3[\s\S]*Advisory \(1\)[\s\S]*src\/b\.ts:9/);
+});
+test('AC-62 the PR body carries run history: failed checks and fix rounds are disclosed automatically', () => {
+  const r = prRepo(); evidence(r.d);
+  emit(r.d, 'x_check', { stage: 'trace', ok: false, msg: 'AC-13 | - | NO TEST' });
+  emit(r.d, 'x_task_end', { task: 'fix1', status: 'passed', attempts: 1 });
+  emit(r.d, 'verdict', { role: 'judge', verdict: 'fail', task: 'run', citations: ['src/a.ts:1'] });
+  assert.equal(create(r).code, 0, create(r).err);
+  const body = readFileSync(r.out, 'utf8');
+  assert.match(body, /## Run history[\s\S]*trace check failed[\s\S]*AC-13[\s\S]*judge[\s\S]*verdict fail[\s\S]*fix1 passed/);
+});
 test('AC-63 PR creation fails clearly when a section is missing', () => {
   const r = prRepo(); evidence(r.d, { reviews: ['code-review'] });
   const x = create(r);
@@ -67,6 +84,15 @@ test('AC-66 no push to the default branch and no merge without an approval for t
   assert.match(merge().err, /head/);
   dec(r, 'agent', r.head);
   assert.equal(merge().code, 0, merge().err);
+});
+test('AC-66 a merge whose local base cannot fast-forward fails loudly instead of leaving a stale tree', () => {
+  const r = prRepo(); const remote = tmp(); const other = tmp();
+  sh(remote, 'git init -q --bare'); sh(r.d, 'git remote add origin ' + remote + ' && git push -q origin main daylight/t1');
+  sh(other, 'git clone -q ' + remote + ' o && cd o && git checkout -q main && echo r > remote.txt && git add -A && git -c user.name=t -c user.email=t@t commit -qm remote-change && git push -q origin main');
+  sh(r.d, 'git checkout -q main && echo l > local.txt && git add -A && git -c user.name=t -c user.email=t@t commit -qm local-only');
+  dec(r, 'agent', r.head);
+  const m = cli(['pr', 'merge', '--branch', 'daylight/t1', '--tier', 'low', '--base', 'main'], { cwd: r.d, env: { ...env, DAYLIGHT_GH: r.gh } });
+  assert.notEqual(m.code, 0); assert.match(m.err, /fast-forward/);
 });
 test('AC-67 a new commit after Gate 2 approval invalidates the approval', () => {
   const r = prRepo(); dec(r, 'agent', r.head);

@@ -15,6 +15,12 @@ export function capture(cwd: string, kind: 'code-review' | 'security-review', le
   append(auditFile(cwd), { kind: 'x_review', phase: 'review', review: kind, file, bytes: text.length, usage, cost_usd: cost });
   return { file, status: r.status ?? 1 };
 }
+/** Reviewers print findings as JSON arrays (optionally fenced); pull them out of the raw text. */
+export function parseFindings(text: string): any[] {
+  const out: any[] = [];
+  for (const m of text.matchAll(/\[\s*\{[\s\S]*?\}\s*\]/g)) { try { const a = JSON.parse(m[0]); if (Array.isArray(a)) out.push(...a.filter((x) => x && typeof x === 'object')); } catch { /* not JSON */ } }
+  return out;
+}
 export function classify(findings: any[]) {
   const blocking = findings.filter((f) => f.file && f.line && f.repro);
   return { blocking, advisory: findings.filter((f) => !blocking.includes(f)) };

@@ -108,7 +108,7 @@ if (cmd === 'config') {
   const { tddCheck } = await import('./tdd.ts');
   const e = tddCheck(process.cwd(), opt('base') ?? 'main', opt('branch')!, opt('task')); if (e.length) fail(e.join('\n')); console.log('ok');
 } else if (cmd === 'red') {
-  const { recordRed } = await import('./tdd.ts'); const e = recordRed(process.cwd(), opt('task')!, opt('cmd')!); if (e) fail(e); console.log('ok');
+  const { recordRed } = await import('./tdd.ts'); const e = recordRed(process.cwd(), opt('task')!, opt('cmd')!, opt('waive')); if (e) fail(e); console.log('ok');
 } else if (cmd === 'verdict' && rest[0] === 'normalize') {
   const { normalize } = await import('./verdict.ts'); const { readFileSync } = await import('node:fs');
   try { const { withMatrix } = await import('./verdict.ts'); const v = normalize(JSON.parse(readFileSync(rest[1], 'utf8'))); console.log(JSON.stringify(opt('matrix') ? withMatrix(v, JSON.parse(readFileSync(opt('matrix')!, 'utf8'))) : v)); } catch (e) { fail((e as Error).message); }
@@ -146,8 +146,9 @@ if (cmd === 'config') {
 } else if (cmd === 'pr') {
   const PR = await import('./pr.ts'); const { resolveConfig } = await import('./config.ts');
   if (rest[0] === 'body') { console.log(PR.buildBody(process.cwd()).body); process.exit(0); }
+  if (rest[0] === 'update') { const u: any = PR.updatePr(process.cwd(), { branch: opt('branch')! }); if (u.error) fail(u.error); console.log(JSON.stringify(u)); process.exit(0); }
   const r: any = await (rest[0] === 'create' ? PR.createPr(process.cwd(), { branch: opt('branch')!, base: opt('base') ?? 'main', title: opt('title') ?? 'Daylight change', push: !flag('no-push'), local: flag('local') })
-    : PR.mergePr(process.cwd(), resolveConfig(process.cwd(), { base: opt('base-config') }), { branch: opt('branch')!, tier: (opt('tier') ?? 'medium') as any, local: flag('local') }));
+    : PR.mergePr(process.cwd(), resolveConfig(process.cwd(), { base: opt('base-config') }), { branch: opt('branch')!, tier: (opt('tier') ?? 'medium') as any, local: flag('local'), base: opt('base') }));
   if (r.error) fail(r.error); console.log(JSON.stringify(r));
 } else if (cmd === 'touchpoints') {
   const { touchpoints } = await import('./metrics.ts'); const { auditFile } = await import('./lib/events.ts');
@@ -187,7 +188,7 @@ if (cmd === 'config') {
 } else if (cmd === 'run') {
   const { runPipeline, summarize } = await import('./pipeline.ts'); const { resolveConfig } = await import('./config.ts'); const { auditFile, runId } = await import('./lib/events.ts'); const { writeFileSync } = await import('node:fs');
   const cfg = resolveConfig(process.cwd(), { config: opt('config') });
-  const r = await runPipeline(process.cwd(), rest[0], cfg, { base: opt('base') ?? 'main', agents: flag('agents') });
+  const r = await runPipeline(process.cwd(), rest[0], cfg, { base: opt('base') ?? (await import('./worktree.ts')).git(process.cwd(), ['rev-parse', '--abbrev-ref', 'HEAD']).stdout.trim(), agents: flag('agents') });
   const out = opt('summary-out'); if (out) writeFileSync(out, JSON.stringify(summarize(auditFile(process.cwd(), runId()), { run: runId(), result: r }), null, 2));
   console.log(JSON.stringify(r)); process.exit(r.ok ? 0 : 1);
 } else if (cmd === 'selfcheck' && rest[0] === 'no-codemode-var') {

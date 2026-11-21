@@ -53,7 +53,11 @@ export function agentDecide(cwd: string, g: string, dir: string, cfg: any): stri
   const r = spawnSync(process.env.DAYLIGHT_CLAUDE || 'claude', ['-p', prompt, '--model', model, '--plugin-dir', PLUGIN, '--output-format', 'json', '--allowedTools', 'Read'], { cwd, encoding: 'utf8' });
   if (r.status !== 0) return 'agent approver failed: ' + r.stderr;
   let out: any;
-  try { const res = JSON.parse(r.stdout); out = JSON.parse(String(res.result).replace(/^```(?:json)?\n?|```$/g, '')); append(auditFile(cwd), { kind: 'x_usage', phase: g, model, usage: res.usage ?? null, cost_usd: res.total_cost_usd ?? null }); } catch { return 'agent approver returned unparseable output'; }
+  try {
+    const res = JSON.parse(r.stdout), txt = String(res.result), m = txt.match(/\{[\s\S]*\}/); // tolerate prose or fences around the JSON
+    out = JSON.parse(m ? m[0] : txt);
+    append(auditFile(cwd), { kind: 'x_usage', phase: g, model, usage: res.usage ?? null, cost_usd: res.total_cost_usd ?? null });
+  } catch { return 'agent approver returned unparseable output'; }
   return decide(cwd, g, { decision: out.decision, source: 'agent', feedback: out.feedback, scores: out.scores, dir, cap: cfg.retries.design, model });
 }
 

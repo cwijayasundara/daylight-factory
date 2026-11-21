@@ -20,7 +20,7 @@ export function decide(p: any, cwd: string): string | null {
 const EDIT_TOOLS = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit'];
 /** AC-47: the generator may not change its own judges. Bash writes are matched on the command text (best effort). */
 export function protectedHit(p: any, cwd: string): string | null {
-  if (p.agent_type !== 'generator' && process.env.DAYLIGHT_ROLE !== 'generator') return null;
+  if (!/(^|:)generator$/.test(String(p.agent_type ?? '')) && process.env.DAYLIGHT_ROLE !== 'generator') return null;
   const cfg = resolveConfig(cwd, { base: process.env.DAYLIGHT_BASE });
   const pats: string[] = cfg.guard.protected_paths;
   const i = p.tool_input ?? {};
@@ -28,7 +28,13 @@ export function protectedHit(p: any, cwd: string): string | null {
     const rel = String(i.file_path ?? i.notebook_path ?? '').replace(cwd + '/', '');
     return pats.some((g) => globRe(g).test(rel)) ? rel : null;
   }
-  if (p.tool_name === 'Bash' && /(>|\btee\b|sed -i|\bmv\b|\bcp\b|\brm\b)[^|;&]*(daylight\.yaml|spec\.md|rubrics\/)/.test(String(i.command))) return String(i.command).slice(0, 120);
+  if (p.tool_name === 'Bash') {
+    // any shell command that names a protected file and is not read-only (python/node/perl rewrites, sed -i, redirects, git checkout/restore ...)
+    const cmd = String(i.command ?? ''), stripped = cmd.replace(/\d?>&\d|\d>\s*\/dev\/null/g, '');
+    const writes = /(>|\btee\b|\bsed\s+-i|\bmv\b|\bcp\b|\brm\b|\bpython3?\b|\bperl\b|\bnode\b\s+-e|\bgit\s+(checkout|restore|apply|stash)\b|\bnpm\s+pkg\b|\bln\b|\btruncate\b|\bdd\b)/.test(stripped);
+    const tokens = cmd.split(/[\s'"`;|&<>()=]+/).filter(Boolean);
+    if (writes && tokens.some((t) => pats.some((g) => globRe(g).test(t.replace(/^\.\//, '').replace(cwd + '/', ''))))) return cmd.slice(0, 120);
+  }
   return null;
 }
 /** AC-66: never push to the default branch (best effort on command text). */

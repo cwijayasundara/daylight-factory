@@ -1,0 +1,122 @@
+{
+  "phases": [
+    {
+      "phase": "triage",
+      "seconds": 0.011,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "ingest",
+      "seconds": 0.017,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "design",
+      "seconds": 138.452,
+      "tokens": {
+        "claude-opus-5-5": {
+          "in": 69209,
+          "out": 12513
+        }
+      },
+      "cost_usd": 0.9144928
+    },
+    {
+      "phase": "plan",
+      "seconds": 19.848,
+      "tokens": {
+        "claude-sonnet-5-5": {
+          "in": 24688,
+          "out": 2066
+        }
+      },
+      "cost_usd": 0.1278707
+    },
+    {
+      "phase": "inner",
+      "seconds": 162.805,
+      "tokens": {
+        "claude-sonnet-5-5": {
+          "in": 98818,
+          "out": 25073
+        },
+        "claude-opus-5-5": {
+          "in": 77404,
+          "out": 15409
+        }
+      },
+      "cost_usd": 1.7077112
+    },
+    {
+      "phase": "sensors",
+      "seconds": 456.089,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "trace",
+      "seconds": 461.043,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "fix",
+      "seconds": 446.016,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "judge",
+      "seconds": 26.099,
+      "tokens": {
+        "claude-opus-5-5": {
+          "in": 22797,
+          "out": 1835
+        }
+      },
+      "cost_usd": 0.22841079999999997
+    },
+    {
+      "phase": "review",
+      "seconds": 112.37,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "pr",
+      "seconds": 4.357,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "gate2",
+      "seconds": 43.575,
+      "tokens": {
+        "claude-opus-5-5": {
+          "in": 31967,
+          "out": 3215
+        }
+      },
+      "cost_usd": 0.3917792000000001
+    }
+  ],
+  "touchpoints": 0,
+  "gates": {
+    "design": "agent",
+    "pr": "agent"
+  },
+  "deploy": {
+    "ok": false
+  },
+  "smoke": {
+    "ok": false
+  },
+  "run": "bh5",
+  "result": {
+    "ok": false,
+    "stage": "scope",
+    "msg": "eslint.config.js changed by task fix2 outside its declared paths (src/, tests/, scripts/, docs/, package.json, README.md, Dockerfile, docker-compose.yml, .dockerignore)\ntsconfig.json changed by task fix2 outside its declared paths (src/, tests/, scripts/, docs/, package.json, README.md, Dockerfile, docker-compose.yml, .dockerignore)\n"
+  }
+}

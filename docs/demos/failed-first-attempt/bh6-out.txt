@@ -1,0 +1,1 @@
+{"ok":false,"stage":"scope","msg":"tests/docker.test.ts changed by task t4 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore)\n"}

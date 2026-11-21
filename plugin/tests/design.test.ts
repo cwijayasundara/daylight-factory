@@ -78,6 +78,13 @@ test('AC-26 agent gate runs on the configured model with the rubric and records 
   const e = events(d).find((x) => x.kind === 'gate');
   assert.equal(e.source, 'agent'); assert.deepEqual(e.scores, { testable: 5, traceable: 4 });
 });
+test('AC-26 an approver reply with prose around the JSON is still parsed', () => {
+  const { d, dd } = mk();
+  const stub = put(d, 'claude2', "#!/bin/bash\ncat <<'EOF'\n" + JSON.stringify({ result: 'Here is my review:\n```json\n{"decision":"approve","scores":{"testable":5},"feedback":""}\n```\nDone.' }) + "\nEOF\n");
+  chmodSync(stub, 0o755);
+  const r = cli(['gate', 'agent', 'design', '--dir', dd], { cwd: d, env: { DAYLIGHT_CLAUDE: stub, DAYLIGHT_RUN: 'r1' } });
+  assert.equal(r.code, 0, r.err); assert.equal(events(d).find((x) => x.kind === 'gate').decision, 'approve');
+});
 test('AC-27 reject-with-feedback loops back: revision increments and feedback is in context', () => {
   const { d, dd } = mk();
   cli(['gate', 'request', 'design', '--dir', dd], { cwd: d });

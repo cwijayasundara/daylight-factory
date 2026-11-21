@@ -73,6 +73,16 @@ test('AC-39 the red step is proven by a recorded failing test run before green',
   assert.equal(cli(['red', '--task', 't1', '--cmd', 'false'], { cwd: d, env: { DAYLIGHT_RUN: 'r1' } }).code, 0);
   assert.equal(cli(['tdd', 'check', '--base', 'main', '--branch', 'f', '--task', 't1'], { cwd: d, env: { DAYLIGHT_RUN: 'r1' } }).code, 0);
 });
+test('AC-39 a generator whose tests already pass can declare a logged TDD waiver; a failing run cannot be waived', () => {
+  const d = tmp(); put(d, 'README.md', 'x');
+  sh(d, 'git init -q -b main && git add -A && git -c user.name=t -c user.email=t@t commit -qm init && git checkout -qb f');
+  put(d, 'tests/a.test.ts', "test('AC-1 a', () => {})"); sh(d, 'git add -A && git -c user.name=t -c user.email=t@t commit -qm tests');
+  const e = { DAYLIGHT_RUN: 'r1' };
+  assert.notEqual(cli(['red', '--task', 't1', '--cmd', 'false', '--waive', 'already implemented'], { cwd: d, env: e }).code, 0, 'failing tests are a real red, not a waiver');
+  assert.equal(cli(['red', '--task', 't1', '--cmd', 'true', '--waive', 'behaviour already implemented by t0'], { cwd: d, env: e }).code, 0);
+  assert.ok(events(d).some((x) => x.kind === 'x_tdd_waiver' && x.task === 't1' && /already implemented/.test(x.reason)));
+  assert.equal(cli(['tdd', 'check', '--base', 'main', '--branch', 'f', '--task', 't1'], { cwd: d, env: e }).code, 0);
+});
 test('AC-40 generator is Sonnet 5.5 and evaluator Opus 5.5 by default, overridable in daylight.yaml', () => {
   const { d, stub, log } = repo(1, 'models:\n  evaluator: claude-opus-5-6\n'); plan(d, [T('t1')]);
   run(d, stub, log, 'pass');
@@ -90,6 +100,11 @@ test('AC-41 verdict JSON: a fail needs a citation, otherwise it is inconclusive 
   assert.equal(JSON.parse(n({ verdict: 'fail', criteria: [{ id: 'c', result: 'fail' }] }).out).effective, 'inconclusive');
   assert.equal(JSON.parse(n({ verdict: 'pass', criteria: [] }).out).effective, 'pass');
   assert.notEqual(n({ criteria: [] }).code, 0);
+});
+test('AC-42 a fix task carries review findings into the generator first prompt', () => {
+  const { d, stub, log } = repo(1); plan(d, [T('fx', { feedback: 'src/http.ts:15 readBody has no size limit' })]);
+  run(d, stub, log, 'pass');
+  assert.match(calls(log).find((x) => x.includes('daylight:generator'))!, /Review findings to fix[\s\S]*src\/http\.ts:15/);
 });
 test('AC-42 / AC-43 retry gets a fresh minimal context with cited feedback; cap stops the next attempt', () => {
   const { d, stub, log } = repo(2); plan(d, [T('t1')]);
@@ -131,9 +146,21 @@ test('AC-47 the generator cannot edit rubric, sensor config or spec; denial is l
   const d = tmp();
   const g = (role: string | undefined, file: string, tool = 'Edit') => spawnSync('node', [join(PLUGIN, 'src/guard.ts')], { cwd: d, encoding: 'utf8', input: JSON.stringify({ cwd: d, hook_event_name: 'PreToolUse', tool_name: tool, tool_input: { file_path: file }, agent_type: role }), env: { ...process.env, DAYLIGHT_RUN: 'r1' } });
   for (const f of ['docs/design/spec.md', 'rubrics/pr.md', 'daylight.yaml']) assert.equal(g('generator', join(d, f)).status, 2, f);
+  for (const f of ['eslint.config.js', 'tsconfig.json', '.eslintrc.json', 'tsconfig.build.json', 'vitest.config.ts']) assert.equal(g('generator', join(d, f)).status, 2, f);
   assert.equal(g('generator', join(d, 'src/app.ts')).status, 0);
   assert.equal(g(undefined, join(d, 'daylight.yaml')).status, 0, 'only the generator is restricted');
-  assert.equal(events(d).filter((e) => e.kind === 'x_denial' && e.reason === 'protected_path').length, 3);
+  assert.equal(events(d).filter((e) => e.kind === 'x_denial' && e.reason === 'protected_path').length, 8);
+});
+test('AC-47 shell writes to protected files are denied for the generator (python, sed, redirects), reads are allowed', () => {
+  const d = tmp();
+  const b = (command: string, role: string | null = 'daylight:generator') => spawnSync('node', [join(PLUGIN, 'src/guard.ts')], { cwd: d, encoding: 'utf8', input: JSON.stringify({ cwd: d, hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command }, agent_type: role }), env: { ...process.env, DAYLIGHT_RUN: 'r1' } }).status;
+  assert.equal(b("python3 - <<'EOF'\np='eslint.config.js'\nopen(p,'w').write('x')\nEOF"), 2);
+  assert.equal(b("sed -i 's/8/30/' eslint.config.js"), 2);
+  assert.equal(b('echo {} > tsconfig.json'), 2);
+  assert.equal(b('git checkout main -- eslint.config.js'), 2);
+  assert.equal(b('cat eslint.config.js tsconfig.json && npm test 2>&1 | tail -5'), 0);
+  assert.equal(b("python3 - <<'EOF'\nopen('src/a.ts','w').write('x')\nEOF"), 0);
+  assert.equal(b("sed -i 's/8/30/' eslint.config.js", null), 0, 'only the generator is restricted');
 });
 test('AC-48 TDD, SOLID and SRP guides exist as rules and as skill text', () => {
   const rules = readFileSync(join(PLUGIN, 'rules/guides.md'), 'utf8');

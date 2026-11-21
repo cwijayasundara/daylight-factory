@@ -1,0 +1,1 @@
+{"ok":false,"stage":"scope","msg":"eslint.config.js changed by task fix2 outside its declared paths (src/, tests/, scripts/, docs/, package.json, README.md, Dockerfile, docker-compose.yml, .dockerignore)\ntsconfig.json changed by task fix2 outside its declared paths (src/, tests/, scripts/, docs/, package.json, README.md, Dockerfile, docker-compose.yml, .dockerignore)\n"}

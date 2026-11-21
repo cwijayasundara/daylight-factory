@@ -14,11 +14,20 @@ export function tddCheck(cwd: string, base: string, branch: string, task?: strin
   if (impl.length || !tests.length) errs.push('first commit ' + first.slice(0, 7) + ' contains implementation but no failing test (impl: ' + (impl.join(', ') || 'none') + ')');
   const tagged = tests.some((f) => /AC-\d+/.test(git(cwd, ['show', first + ':' + f]).stdout));
   if (tests.length && !tagged) errs.push('test files in the first commit carry no AC id (tag tests with AC-n)');
-  if (task && !readLines(auditFile(cwd)).some((l) => { const e = JSON.parse(l); return e.kind === 'x_red' && e.task === task && e.failing; })) errs.push('no red proof recorded for task ' + task + ' (run: daylight red --task ' + task + ' --cmd "<test command>")');
+  if (task && !readLines(auditFile(cwd)).some((l) => { const e = JSON.parse(l); return (e.kind === 'x_red' && e.task === task && e.failing) || (e.kind === 'x_tdd_waiver' && e.task === task && e.declared); })) errs.push('no red proof recorded for task ' + task + ' (run: daylight red --task ' + task + ' --cmd "<test command>"; if your new tests already pass because the behaviour exists, add --waive "<reason>")');
   return errs;
 }
-export function recordRed(cwd: string, task: string, cmd: string): string | null {
+export function waiverFor(cwd: string, task: string): string {
+  const w = readLines(auditFile(cwd)).map((l) => JSON.parse(l)).filter((e) => e.kind === 'x_tdd_waiver' && e.task === task && e.declared).pop();
+  return w ? w.reason : '';
+}
+export function recordRed(cwd: string, task: string, cmd: string, waive?: string): string | null {
   const r = spawnSync('bash', ['-c', cmd], { cwd, encoding: 'utf8' });
+  if (waive) {
+    if (r.status !== 0) return 'tests fail: that is a real red, run without --waive';
+    append(auditFile(cwd), { kind: 'x_tdd_waiver', phase: 'inner', task, declared: true, reason: waive, evidence: 'tests already pass' });
+    return null;
+  }
   if (r.status === 0) return 'tests passed: this is not a red step';
   append(auditFile(cwd), { kind: 'x_red', phase: 'inner', task, cmd, exit: r.status, failing: true, tail: (r.stdout + r.stderr).slice(-400) });
   return null;
