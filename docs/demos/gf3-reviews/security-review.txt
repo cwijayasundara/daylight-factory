@@ -1,0 +1,15 @@
+# Security Review: `daylight/run-gf3`
+
+No high-confidence vulnerabilities found.
+
+I reviewed the whole diff by reading it myself. I did not run the sub-agent steps the review procedure calls for, because the diff is small and there were no candidate findings to pass to the false-positive filters. These are the main attack-surface checks:
+
+- **Routing and prototype safety (`src/app.ts`):** Handler lookup uses `Object.hasOwn(methods, req.method)`, so method names like `__proto__` or `constructor` can't reach prototype members. If `decodeURIComponent` throws, the error is caught and the request gets a 404. Nothing derived from the path reaches a file, shell, or eval sink.
+- **Store (`src/store.ts`):** Notes live in a `Map` keyed by `randomUUID()`. `Map.get("__proto__")` returns `undefined`, so there is no prototype pollution. The IDs come from a cryptographically secure generator.
+- **Input handling (`src/notes.ts`):** `JSON.parse` output is only type-checked and stored. It is never merged into objects, rendered, or run. Responses are `application/json` built with `JSON.stringify`, so stored XSS is not a concern for this API.
+- **Logging:** Only the method, the path (with CR/LF stripped), the status and the duration are logged. Request bodies and note content are never logged.
+- **Error handling:** Unhandled errors return a generic 500 with no stack trace or internal details.
+- **`scripts/smoke.ts`:** The only external input is the `SMOKE_BASE_URL` environment variable, which counts as trusted. No subprocesses or file operations.
+- **Docker:** No secrets in the image. `.dockerignore` excludes `.git` and `node_modules`. The container runs as root and the server binds to `0.0.0.0`, but those are hardening choices, not exploitable flaws, so they fall under the exclusions.
+
+Some things were left out on purpose because the review rules exclude them. The request body has no size limit in `readBody`, which is a DoS/resource issue. The API has no authentication, which matches the spec for a public notes sample rather than being an authorization bypass.

@@ -1,0 +1,82 @@
+{
+  "phases": [
+    {
+      "phase": "triage",
+      "seconds": 0.001,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "ingest",
+      "seconds": 0,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "design",
+      "seconds": 90.852,
+      "tokens": {
+        "claude-opus-5-5": {
+          "in": 56534,
+          "out": 7813
+        }
+      },
+      "cost_usd": 0.6968496
+    },
+    {
+      "phase": "plan",
+      "seconds": 16.616,
+      "tokens": {
+        "claude-sonnet-5-5": {
+          "in": 23329,
+          "out": 1632
+        }
+      },
+      "cost_usd": 0.1179761
+    },
+    {
+      "phase": "inner",
+      "seconds": 306.987,
+      "tokens": {
+        "claude-sonnet-5-5": {
+          "in": 66921,
+          "out": 16257
+        },
+        "claude-opus-5-5": {
+          "in": 61678,
+          "out": 12518
+        }
+      },
+      "cost_usd": 1.2737094000000002
+    },
+    {
+      "phase": "sensors",
+      "seconds": 0.441,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "trace",
+      "seconds": 0.547,
+      "tokens": {},
+      "cost_usd": 0
+    }
+  ],
+  "touchpoints": 0,
+  "gates": {
+    "design": "agent",
+    "pr": null
+  },
+  "deploy": {
+    "ok": false
+  },
+  "smoke": {
+    "ok": false
+  },
+  "run": "gf1",
+  "result": {
+    "ok": false,
+    "stage": "trace",
+    "msg": "| AC | Tests | Result |\n|---|---|---|\n| AC-1 | - | NO TEST |\n| AC-2 | - | NO TEST |\n| AC-3 | - | NO TEST |\n| AC-4 | - | NO TEST |\n| AC-5 | - | NO TEST |\n| AC-6 | - | NO TEST |\n| AC-7 | - | NO TEST |\n| AC-8 | - | NO TEST |\n| AC-9 | - | NO TEST |\n| AC-10 | - | NO TEST |\n| AC-11 | - | NO TEST |\n| AC-12 | - | NO TEST |\n| AC-13 | - | NO TEST |\n| AC-14 | - | NO TEST |\n\n"
+  }
+}

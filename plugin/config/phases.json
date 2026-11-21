@@ -1,0 +1,153 @@
+{
+  "phases": [
+    {
+      "id": "P0-doctor",
+      "mode": "headless",
+      "smoke": {
+        "args": [
+          "doctor",
+          "--json"
+        ]
+      }
+    },
+    {
+      "id": "P0-triage",
+      "mode": "headless",
+      "smoke": {
+        "args": [
+          "triage",
+          "prd.md"
+        ]
+      }
+    },
+    {
+      "id": "P1-ingest",
+      "mode": "code-mode-capable"
+    },
+    {
+      "id": "P2-design",
+      "mode": "code-mode-capable"
+    },
+    {
+      "id": "G1-G2-gates",
+      "mode": "code-mode-capable"
+    },
+    {
+      "id": "P3-plan",
+      "mode": "code-mode-capable"
+    },
+    {
+      "id": "P4-inner-loop",
+      "mode": "code-mode-capable"
+    },
+    {
+      "id": "P5-sensors",
+      "mode": "headless",
+      "smoke": {
+        "args": [
+          "sensors",
+          "run"
+        ]
+      }
+    },
+    {
+      "id": "P6a-judge",
+      "mode": "headless",
+      "smoke": {
+        "args": [
+          "scope",
+          "check",
+          "--plan",
+          "plan.json",
+          "--base",
+          "main"
+        ]
+      }
+    },
+    {
+      "id": "P6-review",
+      "mode": "headless",
+      "smoke": {
+        "args": [
+          "review",
+          "classify",
+          "findings.json"
+        ]
+      }
+    },
+    {
+      "id": "P7-pr",
+      "mode": "headless",
+      "smoke": {
+        "args": [
+          "touchpoints"
+        ]
+      }
+    },
+    {
+      "id": "P8-deploy",
+      "mode": "headless",
+      "smoke": {
+        "args": [
+          "deploy",
+          "--head",
+          "none"
+        ],
+        "expect": 1
+      }
+    },
+    {
+      "id": "P9-monitor",
+      "mode": "headless",
+      "smoke": {
+        "args": [
+          "monitor"
+        ]
+      }
+    },
+    {
+      "id": "P10-wiki",
+      "mode": "headless",
+      "smoke": {
+        "args": [
+          "wiki",
+          "update"
+        ]
+      }
+    },
+    {
+      "id": "P11-reflect",
+      "mode": "headless",
+      "smoke": {
+        "args": [
+          "reflect",
+          "--run",
+          "r1"
+        ]
+      }
+    },
+    {
+      "id": "P12-dream",
+      "mode": "headless",
+      "smoke": {
+        "args": [
+          "dream",
+          "schedule",
+          "install",
+          "--dry-run"
+        ]
+      }
+    },
+    {
+      "id": "audit",
+      "mode": "headless",
+      "smoke": {
+        "args": [
+          "audit",
+          "verify",
+          ".daylight/audit/r1.jsonl"
+        ]
+      }
+    }
+  ]
+}

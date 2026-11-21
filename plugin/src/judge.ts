@@ -24,8 +24,11 @@ export function scopeCheck(cwd: string, planFile: string, base: string): string[
   const errs: string[] = [];
   for (const t of loadPlan(planFile)) {
     if (git(cwd, ['rev-parse', '--verify', '-q', 'daylight/' + t.id]).status !== 0) continue;
-    for (const f of git(cwd, ['diff', '--name-only', base + '...daylight/' + t.id]).stdout.split('\n').filter(Boolean))
+    {
+      const from = git(cwd, ['reflog', 'show', '--format=%H', 'daylight/' + t.id]).stdout.trim().split('\n').pop() || base; // the commit the task branch was created from
+      for (const f of git(cwd, ['diff', '--name-only', from + '..daylight/' + t.id]).stdout.split('\n').filter(Boolean))
       if (!t.paths.some((p) => f.startsWith(p))) errs.push(f + ' changed by task ' + t.id + ' outside its declared paths (' + t.paths.join(', ') + ')');
+    }
   }
   return errs;
 }

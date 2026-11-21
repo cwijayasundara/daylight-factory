@@ -1,0 +1,74 @@
+```json
+[
+  {
+    "file": "src/http.ts",
+    "line": 15,
+    "summary": "One client can crash the service by running it out of memory. `readBody` buffers the entire request body with no size limit, and `POST /notes` calls it on every request before any validation. Fix: track the bytes received and reply 413 (then destroy the request) once a cap such as 1 MB is exceeded.",
+    "failure_scenario": "A client sends `POST /notes` with a multi-GB body, or many concurrent large bodies. Every chunk is pushed into `chunks[]` and then `Buffer.concat` copies them again. The heap fills and the Node process aborts, losing all in-memory notes.",
+    "severity": "important"
+  },
+  {
+    "file": "src/app.ts",
+    "line": 49,
+    "summary": "Some requests are never logged, which breaks the PRD rule \"logs one line per request\". The log line is written only on the response's `finish` event, and that event never fires when the client disconnects first. Fix: log on `res.on('close')`, which fires exactly once in both cases, and mark aborted requests (for example with `res.writableFinished`).",
+    "failure_scenario": "A client sends `POST /notes`, then closes the socket before the response is flushed, or aborts in the middle of the upload. `finish` is never emitted, no log line appears, and the request is invisible in the logs.",
+    "severity": "important"
+  },
+  {
+    "file": "src/app.ts",
+    "line": 27,
+    "summary": "Paths that start with `//` are routed to the wrong endpoint. `new URL(req.url, \"http://localhost\")` treats `//x/...` as a protocol-relative URL, so the first segment becomes the host and is dropped from the path. Fix: take the path from `req.url` directly (split on `?`), or check that it does not start with `//` before parsing.",
+    "failure_scenario": "`GET //anything/health` returns 200 `{status:ok}` and `GET //x/notes` returns the note list. Both should be 404. The log line records the raw `//anything/health`, so the logs disagree with what was actually served.",
+    "severity": "important"
+  },
+  {
+    "file": "scripts/smoke.ts",
+    "line": 8,
+    "summary": "The smoke script can hang forever instead of exiting non-zero. None of its three `fetch` calls has a timeout, so a service that accepts connections but never answers blocks the script indefinitely, which breaks the PRD's \"exits non-zero on any failure\". Fix: pass `signal: AbortSignal.timeout(5000)` to each fetch.",
+    "failure_scenario": "The container is up but the app is wedged, or a proxy holds the connection open. `npm run smoke` never exits, so the CI or deploy gate stalls instead of failing.",
+    "severity": "important"
+  },
+  {
+    "file": "Dockerfile",
+    "line": 7,
+    "summary": "Stopping the container takes the full 10-second grace period and ends in SIGKILL. `node` runs as PID 1, and `src/server.ts` installs no SIGTERM/SIGINT handler, so the process ignores `docker stop`. Fix: add `process.on('SIGTERM', () => server.close(() => process.exit(0)))` in `src/server.ts`, or run with `docker run --init` / `init: true` in compose.",
+    "failure_scenario": "`docker compose down` or `stop` hangs about 10 seconds per container, then kills it with exit code 137. In-flight requests are cut off with no graceful close.",
+    "severity": "important"
+  },
+  {
+    "file": "Dockerfile",
+    "line": 1,
+    "summary": "The container runs the service as root. No `USER` directive is set, although the `node:24-alpine` image includes an unprivileged `node` user. Fix: add `USER node` before `CMD`.",
+    "failure_scenario": "Any remote code execution bug in the service gives the attacker root inside the container, which makes container escape or host-mount abuse easier.",
+    "severity": "nit"
+  },
+  {
+    "file": "src/app.ts",
+    "line": 32,
+    "summary": "HEAD requests to GET routes are rejected with 405. The method lookup matches the method name exactly, so `HEAD /health` gets 405 with `Allow: GET`, which breaks HTTP semantics and confuses health-check tools that use HEAD. Fix: let HEAD fall back to the GET handler (Node drops the body for HEAD automatically).",
+    "failure_scenario": "A load balancer or uptime monitor configured to send `HEAD /health` gets 405 and marks the service as unhealthy.",
+    "severity": "nit"
+  },
+  {
+    "file": "tests/smoke.test.ts",
+    "line": 41,
+    "summary": "The smoke tests fail when the test command is run from any directory other than the repo root. They use cwd-relative paths: `spawn(\"node\", [\"scripts/smoke.ts\"])`, plus `readFileSync(\"package.json\")` and `readFileSync(\"scripts/smoke.ts\")` at lines 55-56. Fix: build the paths with `new URL('../scripts/smoke.ts', import.meta.url)`, as `docker.test.ts` and `notes.test.ts` already do.",
+    "failure_scenario": "Running `node --test tests/smoke.test.ts` from another directory, or from an IDE runner whose cwd is `tests/`, fails with ENOENT, or the spawned smoke script exits 1 because the module is not found. The \"success\" test then fails even though the code is correct.",
+    "severity": "nit"
+  },
+  {
+    "file": "tests/notes.test.ts",
+    "line": 179,
+    "summary": "The AC-13 latency test is likely to fail intermittently. It asserts a p95 under 50 ms on shared CI machines, and the timings include `fetch`/undici client overhead and garbage-collection pauses after 1000 inserts. Fix: warm up before measuring, or allow a margin or skip the test in CI.",
+    "failure_scenario": "On a loaded CI runner, a GC pause or CPU contention pushes the p95 of `GET /notes` (1000-note JSON serialization) past 50 ms. `npm test` fails at random with no code change.",
+    "severity": "nit"
+  },
+  {
+    "file": "scripts/smoke.ts",
+    "line": 24,
+    "summary": "The smoke script puts the returned note id into the URL without encoding it. That is safe for the current UUIDs but breaks if the id format changes or a server returns an id containing `/`, `?` or `#`. Fix: use `encodeURIComponent(String(note.id))`.",
+    "failure_scenario": "If the server returns the id `a/b`, the script requests `GET /notes/a/b`, gets 404, and reports a false failure.",
+    "severity": "nit"
+  }
+]
+```

@@ -1,0 +1,18 @@
+# ADR-019: Deviations from the approved design made during the build
+
+**Status** accepted (recorded as they happened; operator instructions cited where given). **Context** the build plan says any deviation from the design gets a new ADR. **Decision / Consequences** (each item names the AC or ADR it touches):
+
+1. **Brownfield demo target (ADR-018, AC-93).** The goal text named an external repo for the brownfield demo; the operator then said "lets create a simple brownfield repo!", so the demo runs on a purpose-built TypeScript sample (`daylight-brownfield-sample`: source, tests, ESLint config, history, one deliberate convention - library functions return `Result<T>` and never throw). No external repo was cloned or referenced; a grep test (AC-93) keeps repository names out of plugin sources.
+2. **PRs are local artefacts for the sample repos.** The sample repos have no GitHub remote (creating repos on the operator's account needs their approval). `pr create --local` records the branch and body, `pr merge --local` merges with `--no-ff` into the sample's local base branch. Nothing was pushed anywhere. The GitHub path (`gh pr create`, push guard) is unit-tested with a stub `gh`.
+3. **Pipeline orchestration (`daylight run`) is validated by the two demos, not a stub unit test.** Every module it sequences has its own tests; AC-92/93/95 tests read the demo evidence it produced.
+4. **Ingest config acceptance (AC-33).** With agent approvers the operator profile accepts the *sensor* section of the ingest proposal into `daylight.yaml` on the base branch (existing operator keys win) and logs `x_config_accept`; a human can instead run `daylight ingest --accept`.
+5. **Operator tier override for the samples.** Default rules classify Dockerfile/compose as high risk (AC-100). The sample apps' own Dockerfile/compose are the deliverable, so their `daylight.yaml` (on the base branch, as ADR-005 requires) marks those two paths medium. Tier is recomputed from the real diff at PR time.
+6. **Retry cap raised to 4 in the samples' `daylight.yaml`** after attempt 2 showed the Opus evaluator needing more rounds on a smoke script; the evaluator was not weakened.
+7. **Planner rule + TDD waiver.** Attempt 2 failed because the planner made a test-only task whose tests could never be red. The planner prompt now forbids that; a task with no new behaviour may set `tdd:false`, which is logged as `x_tdd_waiver`.
+8. **Test-reporter parsing.** Attempt 1 failed because `npm test -- --test-reporter=tap` is ignored by node when appended after the path; the matrix now parses both TAP and spec-style output (regression test under AC-57).
+9. **Wiki (ADR-014).** Deterministic generator (manifest, hashes, why-trail, link check); optional Sonnet summaries behind `--summarize`. The CodeWiki pilot was not run.
+10. **Dream schedule (AC-85).** `dream schedule install` writes `.daylight/schedule/dream.cron` (an `env -u <code-mode var>` command line) and only touches the user's crontab with `--crontab`.
+11. **Replay (AC-109)** takes fixture case directories (spec, plan, repo) rather than reading past merged PRs from git history.
+12. **Code Mode benchmark (AC-88).** Code Mode is interactive-only, so its arm is read from a session transcript; this session's transcript records zero token usage for Code Mode turns, so tokens are reported only where available and the table says so.
+13. **Spike 3 (where /setup-pstack writes) was not resolved**; pstack is used by reference (ADR-001) and not configured by the plugin.
+14. **Commit messages** from Increment 2 onward contain literal `\n` sequences instead of line breaks (helper bug found late); history is rewritten at the end only on the `factory/build` branch.

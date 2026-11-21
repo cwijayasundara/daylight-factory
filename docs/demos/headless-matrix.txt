@@ -1,0 +1,12 @@
+P0-doctor:0
+P0-triage:0
+P5-sensors:0
+P6a-judge:0
+P6-review:0
+P7-pr:0
+P8-deploy:1
+P9-monitor:0
+P10-wiki:0
+P11-reflect:0
+P12-dream:0
+audit:0

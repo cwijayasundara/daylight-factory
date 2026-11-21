@@ -31,6 +31,9 @@ if (cmd === 'config') {
   if (sub === 'emit') {
     const { append, auditFile } = await import('./lib/events.ts');
     append(auditFile(process.cwd()), { kind: opt('kind')!, ...JSON.parse(opt('data') ?? '{}') });
+  } else if (sub === 'reconstruct') {
+    const { reconstruct } = await import('./metrics.ts'); const { auditFile } = await import('./lib/events.ts');
+    console.log(JSON.stringify(reconstruct(auditFile(process.cwd(), f))));
   } else {
     const { verify, validateLog } = await import('./lib/events.ts');
     const errs = sub === 'verify' ? verify(f) : sub === 'validate' ? validateLog(f) : ['usage: audit <verify|validate|emit>'];
@@ -124,13 +127,13 @@ if (cmd === 'config') {
 } else if (cmd === 'trace') {
   const T = await import('./trace.ts'); const { resolveConfig } = await import('./config.ts'); const { readFileSync, writeFileSync, mkdirSync } = await import('node:fs');
   const cfg = resolveConfig(process.cwd(), { config: opt('config') });
-  const cmdline = opt('cmd') ?? (cfg.sensors.commands.tests ?? 'node --test') + (/test-reporter/.test(cfg.sensors.commands.tests ?? '') ? '' : ' --test-reporter=tap');
+  const cmdline = opt('cmd') ?? (cfg.sensors.commands.tests ?? 'node --test') + (/test-reporter|^npm /.test(cfg.sensors.commands.tests ?? '') ? '' : ' --test-reporter=tap');
   const rows = T.matrix(readFileSync(opt('spec')!, 'utf8'), T.runTests(process.cwd(), cmdline));
   mkdirSync(join(process.cwd(), '.daylight'), { recursive: true }); writeFileSync(join(process.cwd(), '.daylight/trace.json'), JSON.stringify({ rows }, null, 2));
   console.log(T.render(rows)); if (rows.some((r) => r.result !== 'PASS')) process.exit(1);
 } else if (cmd === 'review') {
   const R = await import('./review.ts'); const { readFileSync } = await import('node:fs');
-  if (rest[0] === 'capture') { const r = R.capture(process.cwd(), opt('kind') as any, opt('level')); console.log(r.file); }
+  if (rest[0] === 'capture') { const r = R.capture(process.cwd(), opt('kind') as any, opt('level'), opt('target')); console.log(r.file); }
   else console.log(JSON.stringify(R.classify(JSON.parse(readFileSync(rest[1], 'utf8')))));
 } else if (cmd === 'judge') {
   const J = await import('./judge.ts'); const { resolveConfig } = await import('./config.ts');
@@ -142,8 +145,9 @@ if (cmd === 'config') {
   const { append, auditFile } = await import('./lib/events.ts'); append(auditFile(process.cwd()), { kind: 'x_recovery', phase: 'judge', task: opt('task'), recovered: opt('passed') === 'true' });
 } else if (cmd === 'pr') {
   const PR = await import('./pr.ts'); const { resolveConfig } = await import('./config.ts');
-  const r: any = await (rest[0] === 'create' ? PR.createPr(process.cwd(), { branch: opt('branch')!, base: opt('base') ?? 'main', title: opt('title') ?? 'Daylight change', push: !flag('no-push') })
-    : PR.mergePr(process.cwd(), resolveConfig(process.cwd(), { base: opt('base-config') }), { branch: opt('branch')!, tier: (opt('tier') ?? 'medium') as any }));
+  if (rest[0] === 'body') { console.log(PR.buildBody(process.cwd()).body); process.exit(0); }
+  const r: any = await (rest[0] === 'create' ? PR.createPr(process.cwd(), { branch: opt('branch')!, base: opt('base') ?? 'main', title: opt('title') ?? 'Daylight change', push: !flag('no-push'), local: flag('local') })
+    : PR.mergePr(process.cwd(), resolveConfig(process.cwd(), { base: opt('base-config') }), { branch: opt('branch')!, tier: (opt('tier') ?? 'medium') as any, local: flag('local') }));
   if (r.error) fail(r.error); console.log(JSON.stringify(r));
 } else if (cmd === 'touchpoints') {
   const { touchpoints } = await import('./metrics.ts'); const { auditFile } = await import('./lib/events.ts');
@@ -178,6 +182,14 @@ if (cmd === 'config') {
   const { replay } = await import('./replay.ts'); console.log(replay(opt('cases')!, Number(opt('n') ?? 3), opt('configs')!.split(',')));
 } else if (cmd === 'definition' && rest[0] === 'diff') {
   const { definitionDiff } = await import('./definition.ts'); console.log(definitionDiff(process.cwd(), rest[1], rest[2]));
+} else if (cmd === 'benchmark' && rest[0] === 'compare') {
+  const B = await import('./benchmark.ts'); console.log(B.compare(B.fromTranscript(opt('on')!, opt('start')!, opt('end')!), B.fromP(opt('off')!)));
+} else if (cmd === 'run') {
+  const { runPipeline, summarize } = await import('./pipeline.ts'); const { resolveConfig } = await import('./config.ts'); const { auditFile, runId } = await import('./lib/events.ts'); const { writeFileSync } = await import('node:fs');
+  const cfg = resolveConfig(process.cwd(), { config: opt('config') });
+  const r = await runPipeline(process.cwd(), rest[0], cfg, { base: opt('base') ?? 'main', agents: flag('agents') });
+  const out = opt('summary-out'); if (out) writeFileSync(out, JSON.stringify(summarize(auditFile(process.cwd(), runId()), { run: runId(), result: r }), null, 2));
+  console.log(JSON.stringify(r)); process.exit(r.ok ? 0 : 1);
 } else if (cmd === 'selfcheck' && rest[0] === 'no-codemode-var') {
   const hits = noCodeModeVar(PLUGIN);
   if (hits.length) fail('Code Mode variable referenced in: ' + hits.join(', '));

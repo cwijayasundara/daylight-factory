@@ -1,0 +1,82 @@
+{
+  "phases": [
+    {
+      "phase": "triage",
+      "seconds": 0.002,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "ingest",
+      "seconds": 0.02,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "design",
+      "seconds": 145.654,
+      "tokens": {
+        "claude-opus-5-5": {
+          "in": 68365,
+          "out": 13622
+        }
+      },
+      "cost_usd": 0.9310982
+    },
+    {
+      "phase": "plan",
+      "seconds": 18.874,
+      "tokens": {
+        "claude-sonnet-5-5": {
+          "in": 25177,
+          "out": 1978
+        }
+      },
+      "cost_usd": 0.1290056
+    },
+    {
+      "phase": "inner",
+      "seconds": 191.841,
+      "tokens": {
+        "claude-sonnet-5-5": {
+          "in": 53220,
+          "out": 15592
+        },
+        "claude-opus-5-5": {
+          "in": 40848,
+          "out": 9482
+        }
+      },
+      "cost_usd": 0.9492397999999999
+    },
+    {
+      "phase": "sensors",
+      "seconds": 1.862,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "trace",
+      "seconds": 0.89,
+      "tokens": {},
+      "cost_usd": 0
+    }
+  ],
+  "touchpoints": 0,
+  "gates": {
+    "design": "agent",
+    "pr": null
+  },
+  "deploy": {
+    "ok": false
+  },
+  "smoke": {
+    "ok": false
+  },
+  "run": "bf1",
+  "result": {
+    "ok": false,
+    "stage": "scope",
+    "msg": "docs/design/architecture.md changed by task t1 outside its declared paths (src/handler.ts, src/index.ts, src/note-store.ts, src/search.ts, tests/handler, tests/conventions)\ndocs/design/intent.md changed by task t1 outside its declared paths (src/handler.ts, src/index.ts, src/note-store.ts, src/search.ts, tests/handler, tests/conventions)\ndocs/design/spec.md changed by task t1 outside its declared paths (src/handler.ts, src/index.ts, src/note-store.ts, src/search.ts, tests/handler, tests/conventions)\ndocs/wiki/.manifest.json changed by task t1 outside its declared paths (src/handler.ts, src/index.ts, src/note-store.ts, src/search.ts, tests/handler, tests/conventions)\ndocs/wiki/modules/core.md changed by task t1 outside its declared paths (src/handler.ts, src/index.ts, src/note-store.ts, src/search.ts, tests/handler, tests/conventions)\ndocs/wiki/overview.md changed by task t1 outside its declared paths (src/handler.ts, src/index.ts, src/note-store.ts, src/search.ts, tests/handler, tests/conventions)\ndocs/design/architecture.md changed by task t2 outside its declared paths (src/main.ts, src/server.ts, src/request-log.ts, tests/server, tests/logging, tests/perf)\ndocs/design/intent.md changed by task t2 outside its declared paths (src/main.ts, src/server.ts, src/request-log.ts, tests/server, tests/logging, tests/perf)\ndocs/design/spec.md changed by task t2 outside its declared paths (src/main.ts, src/server.ts, src/request-log.ts, tests/server, tests/logging, tests/perf)\ndocs/wiki/.manifest.json changed by task t2 outside its declared paths (src/main.ts, src/server.ts, src/request-log.ts, tests/server, tests/logging, tests/perf)\ndocs/wiki/modules/core.md changed by task t2 outside its declared paths (src/main.ts, src/server.ts, src/request-log.ts, tests/server, tests/logging, tests/perf)\ndocs/wiki/overview.md changed by task t2 outside its declared paths (src/main.ts, src/server.ts, src/request-log.ts, tests/server, tests/logging, tests/perf)\npackage.json changed by task t2 outside its declared paths (src/main.ts, src/server.ts, src/request-log.ts, tests/server, tests/logging, tests/perf)\nscripts/smoke.ts changed by task t2 outside its declared paths (src/main.ts, src/server.ts, src/request-log.ts, tests/server, tests/logging, tests/perf)\nsrc/handler.ts changed by task t2 outside its declared paths (src/main.ts, src/server.ts, src/request-log.ts, tests/server, tests/logging, tests/perf)\ntests/conventions/conventions.test.ts changed by task t2 outside its declared paths (src/main.ts, src/server.ts, src/request-log.ts, tests/server, tests/logging, tests/perf)\ntests/handler/handler.test.ts changed by task t2 outside its declared paths (src/main.ts, src/server.ts, src/request-log.ts, tests/server, tests/logging, tests/perf)\ntests/smoke/smoke.test.ts changed by task t2 outside its declared paths (src/main.ts, src/server.ts, src/request-log.ts, tests/server, tests/logging, tests/perf)\ntsconfig.json changed by task t2 outside its declared paths (src/main.ts, src/server.ts, src/request-log.ts, tests/server, tests/logging, tests/perf)\ndocs/design/architecture.md changed by task t3 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore, tests/docker)\ndocs/design/intent.md changed by task t3 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore, tests/docker)\ndocs/design/spec.md changed by task t3 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore, tests/docker)\ndocs/wiki/.manifest.json changed by task t3 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore, tests/docker)\ndocs/wiki/modules/core.md changed by task t3 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore, tests/docker)\ndocs/wiki/overview.md changed by task t3 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore, tests/docker)\npackage.json changed by task t3 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore, tests/docker)\nscripts/smoke.ts changed by task t3 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore, tests/docker)\nsrc/handler.ts changed by task t3 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore, tests/docker)\nsrc/main.ts changed by task t3 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore, tests/docker)\nsrc/request-log.ts changed by task t3 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore, tests/docker)\nsrc/server.ts changed by task t3 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore, tests/docker)\ntests/conventions/conventions.test.ts changed by task t3 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore, tests/docker)\ntests/handler/handler.test.ts changed by task t3 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore, tests/docker)\ntests/logging/logging.test.ts changed by task t3 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore, tests/docker)\ntests/perf/perf.test.ts changed by task t3 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore, tests/docker)\ntests/server/shutdown.test.ts changed by task t3 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore, tests/docker)\ntests/smoke/smoke.test.ts changed by task t3 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore, tests/docker)\ntsconfig.json changed by task t3 outside its declared paths (Dockerfile, docker-compose.yml, .dockerignore, tests/docker)\ndocs/design/architecture.md changed by task t4 outside its declared paths (scripts/, package.json, tsconfig.json, eslint.config.js, tests/smoke)\ndocs/design/intent.md changed by task t4 outside its declared paths (scripts/, package.json, tsconfig.json, eslint.config.js, tests/smoke)\ndocs/design/spec.md changed by task t4 outside its declared paths (scripts/, package.json, tsconfig.json, eslint.config.js, tests/smoke)\ndocs/wiki/.manifest.json changed by task t4 outside its declared paths (scripts/, package.json, tsconfig.json, eslint.config.js, tests/smoke)\ndocs/wiki/modules/core.md changed by task t4 outside its declared paths (scripts/, package.json, tsconfig.json, eslint.config.js, tests/smoke)\ndocs/wiki/overview.md changed by task t4 outside its declared paths (scripts/, package.json, tsconfig.json, eslint.config.js, tests/smoke)\n"
+  }
+}

@@ -25,21 +25,23 @@ export function buildBody(cwd: string): { body: string; missing: string[] } {
   parts.push('Daylight-Run: ' + runId());
   return { body: parts.join('\n'), missing };
 }
-export function createPr(cwd: string, o: { branch: string; base: string; title: string; push: boolean }) {
+export function createPr(cwd: string, o: { branch: string; base: string; title: string; push: boolean; local?: boolean }) {
   const { body, missing } = buildBody(cwd);
   if (missing.length) return { error: 'PR body is missing required sections: ' + missing.join(', ') };
   if (['main', 'master', o.base].includes(o.branch)) return { error: 'refusing to open a PR from the default branch' };
   if (o.push) { const p = git(cwd, ['push', '-u', 'origin', o.branch]); if (p.status !== 0) return { error: 'push failed: ' + p.stderr }; }
   mkdirSync(join(cwd, '.daylight'), { recursive: true });
   const f = join(cwd, '.daylight/pr-body.md'); writeFileSync(f, body);
+  if (o.local) return { url: 'local-pr:' + o.branch + ' (no GitHub remote; body at .daylight/pr-body.md)' };
   const r = spawnSync(process.env.DAYLIGHT_GH || 'gh', ['pr', 'create', '--base', o.base, '--head', o.branch, '--title', o.title, '--body-file', f], { cwd, encoding: 'utf8' });
   return r.status === 0 ? { url: r.stdout.trim() } : { error: 'gh pr create failed: ' + r.stderr };
 }
-export async function mergePr(cwd: string, cfg: any, o: { branch: string; tier: 'low' | 'medium' | 'high' }) {
+export async function mergePr(cwd: string, cfg: any, o: { branch: string; tier: 'low' | 'medium' | 'high'; local?: boolean; base?: string }) {
   const head = git(cwd, ['rev-parse', o.branch]).stdout.trim();
   const s = prSatisfied(cwd, cfg, o.tier, head);
   if (!s.ok) return { error: 'merge refused: ' + s.missing.join('; ') };
-  const r = spawnSync(process.env.DAYLIGHT_GH || 'gh', ['pr', 'merge', o.branch, '--squash'], { cwd, encoding: 'utf8' });
+  const r = o.local ? git(cwd, ['merge', '--no-ff', '-m', 'Merge ' + o.branch + '\n\nDaylight-Run: ' + runId(), o.branch]) : spawnSync(process.env.DAYLIGHT_GH || 'gh', ['pr', 'merge', o.branch, '--squash'], { cwd, encoding: 'utf8' });
+  if (o.local && r.status === 0) { /* merged into the checked-out base branch */ }
   if (r.status !== 0) return { error: 'gh pr merge failed: ' + r.stderr };
   const { update } = await import('./wiki.ts');
   return { merged: head, wiki: await update(cwd, cfg, { sha: head }) };

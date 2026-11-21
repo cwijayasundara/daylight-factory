@@ -1,0 +1,82 @@
+{
+  "phases": [
+    {
+      "phase": "triage",
+      "seconds": 0.002,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "ingest",
+      "seconds": 0.016,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "design",
+      "seconds": 137.725,
+      "tokens": {
+        "claude-opus-5-5": {
+          "in": 66827,
+          "out": 12564
+        }
+      },
+      "cost_usd": 0.9034002000000001
+    },
+    {
+      "phase": "plan",
+      "seconds": 15.883,
+      "tokens": {
+        "claude-sonnet-5-5": {
+          "in": 24585,
+          "out": 1557
+        }
+      },
+      "cost_usd": 0.1223921
+    },
+    {
+      "phase": "inner",
+      "seconds": 425.53,
+      "tokens": {
+        "claude-sonnet-5-5": {
+          "in": 72193,
+          "out": 21986
+        },
+        "claude-opus-5-5": {
+          "in": 55646,
+          "out": 11247
+        }
+      },
+      "cost_usd": 1.2794180000000002
+    },
+    {
+      "phase": "sensors",
+      "seconds": 6.322,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "trace",
+      "seconds": 5.03,
+      "tokens": {},
+      "cost_usd": 0
+    }
+  ],
+  "touchpoints": 0,
+  "gates": {
+    "design": "agent",
+    "pr": null
+  },
+  "deploy": {
+    "ok": false
+  },
+  "smoke": {
+    "ok": false
+  },
+  "run": "bf2",
+  "result": {
+    "ok": false,
+    "stage": "scope",
+    "msg": "src/main.ts changed by task t4 outside its declared paths (Dockerfile, docker-compose.yml, scripts/, tests/, package.json, .dockerignore)\n"
+  }
+}

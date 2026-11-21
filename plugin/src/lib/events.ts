@@ -7,7 +7,8 @@ export interface DEvent { id: string; ts: string; run: string; kind: string; sha
 const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 
 export const runId = () => process.env.DAYLIGHT_RUN || 'adhoc-' + new Date().toISOString().slice(0, 10);
-export const auditFile = (cwd: string, run = runId()) => join(cwd, '.daylight', 'audit', run + '.jsonl');
+// DAYLIGHT_AUDIT_ROOT lets hooks fired inside task worktrees write to the run's main log
+export const auditFile = (cwd: string, run = runId()) => join(process.env.DAYLIGHT_AUDIT_ROOT || cwd, '.daylight', 'audit', run + '.jsonl');
 
 export const SECRETS = [/AKIA[0-9A-Z]{16}/g, /gh[pousr]_[A-Za-z0-9]{30,}/g, /sk-[A-Za-z0-9_-]{20,}/g, /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g, /xox[baprs]-[A-Za-z0-9-]{10,}/g, /((?:password|passwd|secret|api[_-]?key)\s*[=:]\s*)[^\s"',;]{6,}/gi];
 export const redact = (s: string) => SECRETS.reduce((t, re, i) => t.replace(re, i === SECRETS.length - 1 ? '$1[REDACTED]' : '[REDACTED]'), s);
@@ -44,7 +45,7 @@ const COMMON = ['id', 'ts', 'run', 'kind', 'sha_prev'];
 export const KINDS: Record<string, string[]> = {
   doctor: ['summary'], tool_pre: ['tool'], tool_post: ['tool'], repl_pre: ['code'], repl_post: ['code'],
   subagent_start: ['role'], subagent_stop: ['role', 'tokens'], sensor: ['name', 'ok'], verdict: ['role', 'verdict'],
-  gate: ['gate', 'decision', 'source'], phase: ['name'], triage: ['work_item', 'tier', 'size', 'rationale'],
+  gate: ['gate', 'decision', 'source'], phase: ['name'], triage: ['work_item', 'tier', 'size', 'rationale'], degraded_evaluator: ['task', 'from', 'to'],
 };
 export function validateLog(file: string): string[] {
   const errs: string[] = [];

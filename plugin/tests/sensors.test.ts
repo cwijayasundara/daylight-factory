@@ -90,6 +90,11 @@ test('AC-57 traceability matrix: AC -> tests -> result; unmapped or failing ACs 
   put(d, 'spec.md', '- **AC-1** returns 1.\n'); put(d, 'tests/x.test.ts', "import test from 'node:test';\ntest('AC-1 one', () => {});\n");
   assert.equal(cli(['trace', '--spec', join(d, 'spec.md'), '--cmd', 'node --test --test-reporter=tap tests/'], { cwd: d }).code, 0);
 });
+test('AC-57 the matrix also reads spec-style runner output (npm test default reporter)', () => {
+  const d = tmp(); put(d, 'spec.md', '- **AC-1** returns 1.\n- **AC-2** returns 2.\n');
+  const r = cli(['trace', '--spec', join(d, 'spec.md'), '--cmd', "printf '  ✔ AC-1 one (0.5ms)\\n  ✖ AC-2 two (1.2ms)\\n'"], { cwd: d });
+  assert.notEqual(r.code, 0); assert.match(r.out, /AC-1.*AC-1 one.*PASS/); assert.match(r.out, /AC-2.*FAIL/);
+});
 test('AC-58 the evaluator cannot mark an unmapped AC as covered', () => {
   const d = tmp();
   const m = put(d, 'm.json', JSON.stringify({ rows: [{ ac: 'AC-1', tests: ['t'], result: 'PASS' }, { ac: 'AC-2', tests: [], result: 'NO TEST' }] }));
@@ -140,6 +145,15 @@ test('AC-106 scope check lists files changed outside declared task paths with no
   const p = put(d, 'plan.json', JSON.stringify({ tasks: [{ id: 't1', title: 't', acs: [], paths: ['src/a/'], deps: [] }] }));
   const r = cli(['scope', 'check', '--plan', p, '--base', 'main'], { cwd: d });
   assert.notEqual(r.code, 0); assert.match(r.err, /src\/b\/stray\.ts/); assert.doesNotMatch(r.err, /src\/a\/ok\.ts/);
+});
+test('AC-106 scope is measured from where the task branched, not from main (design commits on the run branch are not drift)', () => {
+  const d = tmp(); put(d, 'README.md', 'x');
+  sh(d, 'git init -q -b main && git add -A && git -c user.name=t -c user.email=t@t commit -qm init && git checkout -qb daylight/run-1');
+  put(d, 'docs/design/spec.md', 'design'); put(d, 'docs/wiki/overview.md', 'wiki'); sh(d, 'git add -A && git -c user.name=t -c user.email=t@t commit -qm design');
+  sh(d, 'git checkout -qb daylight/t1'); put(d, 'src/a/ok.ts', '1'); sh(d, 'git add -A && git -c user.name=t -c user.email=t@t commit -qm task');
+  const p = put(d, 'plan.json', JSON.stringify({ tasks: [{ id: 't1', title: 't', acs: [], paths: ['src/a/'], deps: [] }] }));
+  const r = cli(['scope', 'check', '--plan', p, '--base', 'main'], { cwd: d });
+  assert.equal(r.code, 0, r.err);
 });
 test('AC-107 vetoes and later recovery are recorded as events', () => {
   const d = tmp(); const env = { DAYLIGHT_RUN: 'r1' };

@@ -4,8 +4,8 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { append, auditFile } from './lib/events.ts';
 
-export function capture(cwd: string, kind: 'code-review' | 'security-review', level = 'medium') {
-  const cmd = kind === 'code-review' ? '/code-review ' + level : '/security-review';
+export function capture(cwd: string, kind: 'code-review' | 'security-review', level = 'medium', target = '') {
+  const cmd = kind === 'code-review' ? ('/code-review ' + level + ' ' + target).trim() : '/security-review';
   const r = spawnSync(process.env.DAYLIGHT_CLAUDE || 'claude', ['-p', cmd, '--output-format', 'json', '--allowedTools', 'Read,Grep,Glob,Bash'], { cwd, encoding: 'utf8' });
   let text = r.stdout, usage = null, cost = null;
   try { const j = JSON.parse(r.stdout); text = String(j.result ?? ''); usage = j.usage ?? null; cost = j.total_cost_usd ?? null; } catch { /* raw */ }

@@ -1,0 +1,116 @@
+{
+  "phases": [
+    {
+      "phase": "triage",
+      "seconds": 0.002,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "ingest",
+      "seconds": 0,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "design",
+      "seconds": 100.085,
+      "tokens": {
+        "claude-opus-5-5": {
+          "in": 59199,
+          "out": 8675
+        }
+      },
+      "cost_usd": 0.7535366
+    },
+    {
+      "phase": "plan",
+      "seconds": 18.691,
+      "tokens": {
+        "claude-sonnet-5-5": {
+          "in": 24000,
+          "out": 1863
+        }
+      },
+      "cost_usd": 0.1230366
+    },
+    {
+      "phase": "inner",
+      "seconds": 436.655,
+      "tokens": {
+        "claude-sonnet-5-5": {
+          "in": 61110,
+          "out": 18147
+        },
+        "claude-opus-5-5": {
+          "in": 51087,
+          "out": 10192
+        }
+      },
+      "cost_usd": 1.142865
+    },
+    {
+      "phase": "sensors",
+      "seconds": 0.884,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "trace",
+      "seconds": 0.923,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "judge",
+      "seconds": 31.255,
+      "tokens": {
+        "claude-opus-5-5": {
+          "in": 18071,
+          "out": 2310
+        }
+      },
+      "cost_usd": 0.19904260000000001
+    },
+    {
+      "phase": "review",
+      "seconds": 67.539,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "pr",
+      "seconds": 0.113,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "gate2",
+      "seconds": 21.803,
+      "tokens": {
+        "claude-opus-5-5": {
+          "in": 25682,
+          "out": 1510
+        }
+      },
+      "cost_usd": 0.2535768
+    }
+  ],
+  "touchpoints": 1,
+  "gates": {
+    "design": "agent",
+    "pr": "agent"
+  },
+  "deploy": {
+    "ok": false
+  },
+  "smoke": {
+    "ok": false
+  },
+  "run": "gf3",
+  "result": {
+    "ok": false,
+    "stage": "gate2",
+    "msg": "Gate 2 not satisfied (a human decision is needed): {\"ok\":false,\"missing\":[\"Gate 2 is escalated (no recorded approval)\"],\"policy\":{\"tier\":\"medium\",\"agent_only\":true,\"human_required\":false,\"reason\":\"medium tier follows the configured policy\"}}\n"
+  }
+}
