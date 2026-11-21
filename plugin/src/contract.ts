@@ -14,6 +14,8 @@ export function scopeViolations(files: string[], t: Pick<Task, 'id' | 'paths' | 
   return out;
 }
 /** True when the previous attempt failed with at least one identical computational message. */
+/** An implementation-first first commit cannot be fixed by editing forward (history is fixed): the branch must restart. */
+export const needsFreshStart = (messages: string[]) => messages.some((m) => /^first commit \w+ contains implementation/.test(m));
 export const repeatsPrevious = (prev: string[] | undefined, now: string[]) => !!prev && now.some((m) => prev.includes(m));
 /** Who must act on a failure: the harness (fix the tooling) or the generator (retry with feedback). */
 export const failureClass = (messages: string[]): 'harness' | 'generator' => (messages.some((m) => /timed out after|returned no usable verdict/.test(m)) ? 'harness' : 'generator');

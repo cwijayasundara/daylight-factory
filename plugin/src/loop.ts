@@ -7,7 +7,7 @@ import { git, addWorktree } from './worktree.ts';
 import { normalize } from './verdict.ts';
 import { extractJson } from './lib/json.ts';
 import { generatorContext } from './context.ts';
-import { scopeViolations, repeatsPrevious, failureClass } from './contract.ts';
+import { scopeViolations, repeatsPrevious, failureClass, needsFreshStart } from './contract.ts';
 import { tddCheck, waiverFor } from './tdd.ts';
 import { append, auditFile } from './lib/events.ts';
 import { tddApplies, type Task } from './plan.ts';
@@ -57,6 +57,11 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
       const repeated = repeatsPrevious(prevComp, computational); prevComp = computational;
       feedback = computational.join('\n');
       if (repeated) { append(file, { kind: 'x_repeat_failure', phase: 'inner', task: t.id, attempt: n }); feedback += '\n(the same failure repeated on consecutive attempts)'; break; }
+      if (needsFreshStart(computational) && n < attempts) { // history cannot be edited forward: restart the branch, keep the discarded diff in the prompt
+        git(wt.path, ['reset', '-q', '--hard', wt.base]); git(wt.path, ['clean', '-fdq', '-e', 'node_modules']);
+        append(file, { kind: 'x_tdd_reset', phase: 'inner', task: t.id, attempt: n });
+        feedback += '\n(your branch was reset to its start because the first commit had no failing test; the discarded diff is shown above. Start over: commit failing tests first, record red, then implement.)';
+      }
       continue;
     }
     prevComp = undefined;
