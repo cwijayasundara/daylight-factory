@@ -26,6 +26,17 @@ if (cmd === 'config') {
   const c = check(root, opt('budget') ? Number(opt('budget')) : undefined);
   console.log(table(c.rows, c.total));
   if (flag('check') && c.errors.length) fail(c.errors.join('\n'));
+} else if (cmd === 'audit') {
+  const [sub, f] = rest;
+  if (sub === 'emit') {
+    const { append, auditFile } = await import('./lib/events.ts');
+    append(auditFile(process.cwd()), { kind: opt('kind')!, ...JSON.parse(opt('data') ?? '{}') });
+  } else {
+    const { verify, validateLog } = await import('./lib/events.ts');
+    const errs = sub === 'verify' ? verify(f) : sub === 'validate' ? validateLog(f) : ['usage: audit <verify|validate|emit>'];
+    if (errs.length) fail(errs.join('\n'));
+    console.log('ok');
+  }
 } else if (cmd === 'selfcheck' && rest[0] === 'no-codemode-var') {
   const hits = noCodeModeVar(PLUGIN);
   if (hits.length) fail('Code Mode variable referenced in: ' + hits.join(', '));

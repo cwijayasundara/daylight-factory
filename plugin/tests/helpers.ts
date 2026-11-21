@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,4 +19,10 @@ export function cli(args: string[], opts: { cwd?: string; env?: Record<string, s
   const r = spawnSync('node', [join(PLUGIN, 'src/cli.ts'), ...args], { cwd: opts.cwd ?? PLUGIN, env, encoding: 'utf8' });
   return { code: r.status ?? -1, out: r.stdout, err: r.stderr };
 }
+export function hook(payload: object, cwd: string, env: Record<string, string> = {}) {
+  const r = spawnSync('node', [join(PLUGIN, 'src/hook.ts')], { cwd, input: JSON.stringify(payload), encoding: 'utf8', env: { ...process.env, DAYLIGHT_RUN: 'r1', ...env } });
+  return { code: r.status ?? -1, out: r.stdout, err: r.stderr };
+}
+export const events = (cwd: string, run = 'r1') =>
+  readFileSync(join(cwd, '.daylight/audit', run + '.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
 export const MIN_YAML = 'gates:\n  design: { approver: human }\n  pr: { approver: agent }\ndeploy:\n  target: local\n';
