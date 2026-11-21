@@ -8,6 +8,10 @@ export function checkPlan(spec: string, tasks: Task[]): string[] {
   return acIds(spec).filter((a) => !covered.has(a)).map((a) => a + ' has no task');
 }
 
+/** TDD applies only when the task touches code; config-only tasks (Dockerfile, compose, docs) have no behaviour to test first. */
+const CODE_PATH = /^(src|tests?|scripts|lib|app)\/|\.(tsx?|jsx?|py|mjs|cjs)$|^package\.json$/;
+export const tddApplies = (t: Pick<Task, 'paths' | 'tdd'>) => t.tdd !== false && t.paths.some((p) => CODE_PATH.test(p));
+
 /** Small, low-tier work: Gate 1 skips the Opus approver and the plan is one task (ADR-024). */
 export const isFastPath = (t: { size: string; tier: string }, cfg: { fast_path?: boolean }) => cfg.fast_path !== false && t.size === 'small' && t.tier === 'low';
 export const fastPlan = (spec: string, title: string): { tasks: Task[] } => ({ tasks: [{ id: 't1', title, acs: [...new Set(acIds(spec))], paths: ['src/', 'tests/', 'scripts/', 'docs/', 'package.json', 'README.md', 'Dockerfile', 'docker-compose.yml', '.dockerignore'], deps: [], size: 'small' }] });

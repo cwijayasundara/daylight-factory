@@ -10,7 +10,7 @@ import { generatorContext } from './context.ts';
 import { scopeViolations, repeatsPrevious, failureClass } from './contract.ts';
 import { tddCheck, waiverFor } from './tdd.ts';
 import { append, auditFile } from './lib/events.ts';
-import type { Task } from './plan.ts';
+import { tddApplies, type Task } from './plan.ts';
 
 const PLUGIN = join(dirname(fileURLToPath(import.meta.url)), '..');
 export interface Sensor { ok: boolean; messages: string }
@@ -31,7 +31,7 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
   const file = auditFile(cwd);
   const wt = addWorktree(cwd, t.id);
   append(file, { kind: 'x_task_start', phase: 'inner', task: t.id });
-  if (t.tdd === false) append(file, { kind: 'x_tdd_waiver', phase: 'inner', task: t.id, reason: 'planner marked the task as having no new behaviour' });
+  if (!tddApplies(t)) append(file, { kind: 'x_tdd_waiver', phase: 'inner', task: t.id, reason: t.tdd === false ? 'planner marked the task as having no new behaviour' : 'config-only task: no code paths to test first' });
   let feedback = '', diff = '', prevComp: string[] | undefined;
   const rd = (p: string) => (existsSync(p) ? readFileSync(p, 'utf8') : '');
   const ctx = generatorContext(t, { spec: opts.spec ? rd(opts.spec) : '', sensors: cfg.sensors ?? {}, conventions: rd(join(cwd, '.daylight/ingest/conventions.md')) });
@@ -49,7 +49,7 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
     diff = git(wt.path, ['diff', wt.base, 'HEAD']).stdout.slice(0, 20000);
     const computational: string[] = [];
     computational.push(...scopeViolations(git(wt.path, ['diff', '--name-only', git(wt.path, ['merge-base', wt.base, 'HEAD']).stdout.trim() || wt.base, 'HEAD']).stdout.split('\n').filter(Boolean), t, cfg.guard?.protected_paths ?? []));
-    if (t.tdd !== false) computational.push(...tddCheck(cwd, wt.base, wt.branch, t.id));
+    if (tddApplies(t)) computational.push(...tddCheck(cwd, wt.base, wt.branch, t.id));
     if (opts.sensors) { const s = await opts.sensors(wt.path, t); if (!s.ok) computational.push(s.messages); }
     if (computational.length) { // contract failed: the verdict is already fail (ADR-002), so skip the paid evaluator and feed the messages back
       append(file, { kind: 'verdict', phase: 'inner', role: 'harness', task: t.id, attempt: n, verdict: 'fail', evaluator_verdict: 'skipped', computational });
