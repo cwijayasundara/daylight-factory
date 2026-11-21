@@ -266,6 +266,9 @@
         },
         "smoke_command": {
           "type": "string"
+        },
+        "health_command": {
+          "type": "string"
         }
       }
     },

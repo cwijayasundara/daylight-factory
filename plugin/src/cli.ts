@@ -162,6 +162,12 @@ if (cmd === 'config') {
   const { ingest } = await import('./ingest.ts'); const { resolveConfig } = await import('./config.ts');
   const r = await ingest(process.cwd(), resolveConfig(process.cwd()), { auto: flag('auto'), accept: flag('accept') });
   if (r.code) fail(r.out); console.log(r.out);
+} else if (cmd === 'deploy') {
+  const D = await import('./deploy.ts'); const { resolveConfig } = await import('./config.ts');
+  const r = await D.deploy(process.cwd(), resolveConfig(process.cwd(), { base: opt('base-config') }), opt('head')!); if (!r.ok) fail(r.msg); console.log(r.msg);
+} else if (cmd === 'monitor') {
+  const D = await import('./deploy.ts'); const { resolveConfig } = await import('./config.ts');
+  const f = D.monitor(process.cwd(), resolveConfig(process.cwd())); console.log(f ? 'regression task created: ' + f : 'healthy');
 } else if (cmd === 'selfcheck' && rest[0] === 'no-codemode-var') {
   const hits = noCodeModeVar(PLUGIN);
   if (hits.length) fail('Code Mode variable referenced in: ' + hits.join(', '));

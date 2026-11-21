@@ -22,5 +22,6 @@ export function normalize(arg: string): WorkItem {
   const title = (body.match(/^#\s+(.+)$/m) ?? [])[1] ?? arg;
   const isTask = !!fm && /kind:\s*task/.test(fm[1]);
   const scope = fm?.[1].match(/scope:\s*(\w+)/)?.[1];
-  return { id: idOf(arg + text), source: isTask ? 'task' : 'prd', title, body, evidence: [{ kind: isTask ? 'task-file' : 'prd', ref: arg }], paths: findPaths(body), ...(scope ? { scope } : {}) };
+  const origin = fm?.[1].match(/origin_run:\s*(\S+)/)?.[1];
+  return { id: idOf(arg + text), source: isTask ? 'task' : 'prd', title, body, evidence: [{ kind: isTask ? 'task-file' : 'prd', ref: arg }, ...(origin ? [{ kind: 'originating-run', ref: origin }] : [])], paths: findPaths(body), ...(scope ? { scope } : {}) };
 }
