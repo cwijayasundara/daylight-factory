@@ -32,7 +32,7 @@ test('AC-92 stubbed pipeline: PRD to design, plan, parallel tasks, PR, Gate 2, m
   const f = fixture(); const r = f.run();
   assert.equal(r.res.ok, true, JSON.stringify(r.res) + r.err);
   assert.equal(r.res.stage, 'done');
-  assert.deepEqual([f.count('design'), f.count('gate1'), f.count('plan'), f.count('generator'), f.count('evaluator'), f.count('judge'), f.count('review'), f.count('gate2')], [1, 1, 1, 2, 2, 1, 2, 1]);
+  assert.deepEqual([f.count('design'), f.count('gate1'), f.count('plan'), f.count('generator'), f.count('evaluator'), f.count('judge'), f.count('review'), f.count('gate2')], [1, 1, 1, 2, 2, 1, 2, 0]); // ADR-022: low tier Gate 2 is deterministic, no Opus approver call
   assert.match(sh(f.d, 'git log --oneline main').stdout, /Merge daylight\/run-e1/);
   assert.ok(existsSync(join(f.d, 'ready.flag')), 'docker stub ran up and health passed');
   assert.ok(existsSync(join(f.d, 'src/a/t1.ts')) && existsSync(join(f.d, 'src/b/t2.ts')));

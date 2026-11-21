@@ -9,6 +9,7 @@ import { deepMerge, resolveConfig } from './config.ts';
 import { normalize } from './workitem.ts';
 import { triage } from './triage.ts';
 import { extractJson } from './lib/json.ts';
+import { gate2, type Evidence } from './gate2.ts';
 import { prdCheck } from './design.ts';
 import { ingest } from './ingest.ts';
 import { request, agentDecide, decide, verifyGate } from './gate.ts';
@@ -129,6 +130,12 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
     const s = await ph('fix', () => runInner(cwd, [t], cfg, { integrate: true, sensors: async (wt) => { const r = runFast(wt, cfg); return { ok: r.ok, messages: r.results.flatMap((x) => x.messages).join('\n') }; } }));
     return s[t.id] === 'passed';
   };
+  const gate2Evidence = (): Evidence => {
+    const rd = (p: string) => (existsSync(join(cwd, p)) ? readFileSync(join(cwd, p), 'utf8') : undefined);
+    const tr = rd('.daylight/trace.json');
+    const judge = [...loadEvents(f)].reverse().find((e) => e.kind === 'verdict' && e.role === 'judge')?.verdict;
+    return { matrix: tr ? JSON.parse(tr).rows : [], sensorsOk: true, scopeErrors: [], judge: judge === 'pass' || judge === 'fail' || judge === 'inconclusive' ? judge : 'missing', reviews: { 'code-review': rd('.daylight/reviews/code-review.txt'), 'security-review': rd('.daylight/reviews/security-review.txt') } };
+  };
   const rounds = Math.min(2, cfg.retries.design);
   let tier: 'low' | 'medium' | 'high' = 'low', head = '', prDone = false;
   for (let round = 0; round <= rounds; round++) {
@@ -142,7 +149,17 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
     prDone = true; append(f, { kind: 'x_pr', phase: 'pr', out: pr.stdout.trim().slice(0, 200) });
     head = git(cwd, ['rev-parse', 'HEAD']).stdout.trim();
     let d: any = { decision: 'reject', feedback: 'unparseable approver output' };
-    await ph('gate2', async () => {
+    // ADR-022: Gate 2 is deterministic over the evidence; the Opus approver is consulted only for the high tier
+    const ev = gate2Evidence();
+    const g2 = gate2(ev);
+    append(f, { kind: 'x_gate2_eval', phase: 'gate2', decision: g2.decision, reasons: g2.reasons, blocking: g2.blocking.length, advisory: g2.advisory.length, tier });
+    if (g2.decision === 'reject') {
+      if (!g2.blocking.length) return stop('gate2', 'Gate 2 evidence incomplete: ' + g2.reasons.join('; '));
+      d = { decision: 'reject', feedback: g2.blocking.map((x: any) => '- ' + x.file + ':' + x.line + ' ' + (x.summary ?? '') + ' (repro: ' + x.repro + ')').join('\n') };
+      decide(cwd, 'pr', { decision: 'reject', source: 'agent', feedback: d.feedback, dir, cap: cfg.retries.design, model: 'deterministic', head });
+    } else if (tier !== 'high') {
+      decide(cwd, 'pr', { decision: 'approve', source: 'agent', feedback: '', scores: {}, dir, cap: cfg.retries.design, model: 'deterministic', head });
+    } else await ph('gate2', async () => {
       const text = await ask('gate2', cfg.models.approver, 'high', 'Apply the pr-rubric skill (' + join(PLUGIN, 'skills/pr-rubric/SKILL.md') + ') to this PR. Body: .daylight/pr-body.md. Diff stat:\n' + git(cwd, ['diff', '--stat', o.base + '...HEAD']).stdout + '\nReply ONLY JSON {"decision":"approve|reject","scores":{},"feedback":""}', 'Read,Grep,Glob');
       try { d = extractJson(text); } catch { /* keep reject */ }
       decide(cwd, 'pr', { decision: d.decision, source: 'agent', feedback: d.feedback, scores: d.scores, dir, cap: cfg.retries.design, model: cfg.models.approver, head });
