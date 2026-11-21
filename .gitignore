@@ -3,3 +3,4 @@ node_modules
 .daylight-spike/
 .claude/settings.local.json
 unnamed.jpg
+docs/*.eml
