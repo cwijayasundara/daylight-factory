@@ -9,7 +9,8 @@ export function checkPlan(spec: string, tasks: Task[]): string[] {
 }
 
 /** TDD applies only when the task touches code; config-only tasks (Dockerfile, compose, docs) have no behaviour to test first. */
-const CODE_PATH = /^(src|tests?|scripts|lib|app)\/|\.(tsx?|jsx?|py|mjs|cjs)$|^package\.json$/;
+// scripts/ (smoke clients, tooling) and package.json have no test to write first: they are verified by running them
+const CODE_PATH = /^(src|tests?|lib|app)\/|^(?!scripts\/).*\.(tsx?|jsx?|py|mjs|cjs)$/;
 export const tddApplies = (t: Pick<Task, 'paths' | 'tdd'>) => t.tdd !== false && t.paths.some((p) => CODE_PATH.test(p));
 
 /** Small, low-tier work: Gate 1 skips the Opus approver and the plan is one task (ADR-023). */

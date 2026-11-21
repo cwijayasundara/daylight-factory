@@ -26,6 +26,15 @@ export function lintPlan(tasks: Task[], o: { protectedGlobs: string[]; spec: str
     if (/^(tests?|docs)\//.test(p) || o.exists?.(p) || explicit.has(p)) continue;
     errs.push(p + ' is named in architecture.md but no task lists it explicitly in its paths: put it in the paths of the task that creates it');
   }
+  // an AC that names a file only another task owns cannot be met by its own task (bh11: AC-17 named the Dockerfile and src/main.ts)
+  const owns = (t: Task, f: string) => t.paths.some((p) => p === f || (p.endsWith('/') && f.startsWith(p)));
+  for (const m of o.spec.matchAll(/\*\*(AC-\d+)\*\*\s*(.*)/g)) {
+    const files = [...new Set([...m[2].matchAll(/(?:[\w.-]+\/)+[\w.-]+\.[a-z]{1,4}\b|\bDockerfile\b|\bdocker-compose\.yml\b/g)].map((x) => x[0]))];
+    for (const t of tasks.filter((x) => x.acs.includes(m[1]))) for (const f of files) {
+      const owner = tasks.find((x) => x.id !== t.id && owns(x, f));
+      if (!owns(t, f) && owner) errs.push(m[1] + ' names ' + f + ' which task ' + owner.id + ' owns but its task ' + t.id + ' does not: give ' + t.id + ' that path (it already depends on the owner) or move ' + m[1] + ' to ' + owner.id);
+    }
+  }
   const planned = new Set(tasks.flatMap((t) => t.acs));
   for (const m of o.spec.matchAll(/\*\*(AC-\d+)\*\*\s*(.*)/g)) {
     if (!planned.has(m[1])) continue;
