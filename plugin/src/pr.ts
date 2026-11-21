@@ -35,10 +35,12 @@ export function createPr(cwd: string, o: { branch: string; base: string; title: 
   const r = spawnSync(process.env.DAYLIGHT_GH || 'gh', ['pr', 'create', '--base', o.base, '--head', o.branch, '--title', o.title, '--body-file', f], { cwd, encoding: 'utf8' });
   return r.status === 0 ? { url: r.stdout.trim() } : { error: 'gh pr create failed: ' + r.stderr };
 }
-export function mergePr(cwd: string, cfg: any, o: { branch: string; tier: 'low' | 'medium' | 'high' }) {
+export async function mergePr(cwd: string, cfg: any, o: { branch: string; tier: 'low' | 'medium' | 'high' }) {
   const head = git(cwd, ['rev-parse', o.branch]).stdout.trim();
   const s = prSatisfied(cwd, cfg, o.tier, head);
   if (!s.ok) return { error: 'merge refused: ' + s.missing.join('; ') };
   const r = spawnSync(process.env.DAYLIGHT_GH || 'gh', ['pr', 'merge', o.branch, '--squash'], { cwd, encoding: 'utf8' });
-  return r.status === 0 ? { merged: head } : { error: 'gh pr merge failed: ' + r.stderr };
+  if (r.status !== 0) return { error: 'gh pr merge failed: ' + r.stderr };
+  const { update } = await import('./wiki.ts');
+  return { merged: head, wiki: await update(cwd, cfg, { sha: head }) };
 }
