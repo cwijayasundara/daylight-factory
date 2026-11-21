@@ -101,7 +101,8 @@ if (cmd === 'config') {
 } else if (cmd === 'plan' && rest[0] === 'lint') {
   const { loadPlan } = await import('./plan.ts'); const { lintPlan } = await import('./planlint.ts'); const { resolveConfig } = await import('./config.ts'); const { readFileSync } = await import('node:fs');
   const cfg = resolveConfig(process.cwd(), { base: opt('base') });
-  const e = lintPlan(loadPlan(opt('plan')!), { protectedGlobs: cfg.guard.protected_paths, spec: readFileSync(opt('spec')!, 'utf8'), requiredSensors: cfg.sensors.required }); if (e.length) fail(e.join('\n')); console.log('ok');
+  const { existsSync } = await import('node:fs'); const { join, dirname } = await import('node:path'); const archF = join(dirname(opt('spec')!), 'architecture.md');
+  const e = lintPlan(loadPlan(opt('plan')!), { protectedGlobs: cfg.guard.protected_paths, spec: readFileSync(opt('spec')!, 'utf8'), requiredSensors: cfg.sensors.required, architecture: existsSync(archF) ? readFileSync(archF, 'utf8') : '', exists: (p) => existsSync(p) }); if (e.length) fail(e.join('\n')); console.log('ok');
 } else if (cmd === 'plan' && rest[0] === 'check') {
   const { checkPlan, loadPlan } = await import('./plan.ts');
   const { readFileSync } = await import('node:fs');

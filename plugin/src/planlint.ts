@@ -5,7 +5,7 @@ import type { Task } from './plan.ts';
 const META: [RegExp, string][] = [[/\bcoverage\b/i, 'coverage'], [/\bcomplexity\b/i, 'complexity'], [/\bduplicat/i, 'duplication'], [/\b(dependency layer|layering|import boundar)/i, 'layers'], [/\b(vulnerab|advisor)/i, 'advisories']];
 const overlaps = (a: string, b: string) => a.startsWith(b) || b.startsWith(a);
 
-export function lintPlan(tasks: Task[], o: { protectedGlobs: string[]; spec: string; requiredSensors: string[] }): string[] {
+export function lintPlan(tasks: Task[], o: { protectedGlobs: string[]; spec: string; requiredSensors: string[]; architecture?: string; exists?: (p: string) => boolean }): string[] {
   const errs: string[] = [], ids = new Set(tasks.map((t) => t.id));
   for (const t of tasks) for (const d of t.deps) if (!ids.has(d)) errs.push('task ' + t.id + ' depends on unknown task ' + d);
   // dependency closure, also used to decide which tasks can run in parallel
@@ -19,6 +19,12 @@ export function lintPlan(tasks: Task[], o: { protectedGlobs: string[]; spec: str
     if (up.get(a.id)!.has(b.id) || up.get(b.id)!.has(a.id)) continue; // ordered by a dependency: not parallel
     const hit = a.paths.flatMap((p) => b.paths.filter((q) => overlaps(p, q)).map((q) => p + ' / ' + q))[0];
     if (hit) errs.push('independent tasks ' + a.id + ' and ' + b.id + ' have overlapping paths (' + hit + '): add a dependency or split the paths');
+  }
+  // a new file the design names needs an explicit owner: a broad directory in several tasks makes each assume another creates it
+  const explicit = new Set(tasks.flatMap((t) => t.paths));
+  for (const p of new Set([...(o.architecture ?? '').matchAll(/`([\w.-]+(?:\/[\w.-]+)+\.[a-z]{1,4})`/g)].map((m) => m[1]))) {
+    if (/^(tests?|docs)\//.test(p) || o.exists?.(p) || explicit.has(p)) continue;
+    errs.push(p + ' is named in architecture.md but no task lists it explicitly in its paths: put it in the paths of the task that creates it');
   }
   const planned = new Set(tasks.flatMap((t) => t.acs));
   for (const m of o.spec.matchAll(/\*\*(AC-\d+)\*\*\s*(.*)/g)) {

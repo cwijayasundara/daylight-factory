@@ -26,3 +26,12 @@ test('generatorContext: carries AC text, sensor limits and conventions', () => {
   assert.match(c, /coverage.*80/); assert.match(c, /complexity.*10/); assert.match(c, /use tabs/);
 });
 test('generatorContext: no conventions section when none exist', () => assert.doesNotMatch(generatorContext(T('a'), { spec: '', sensors: {}, conventions: '' }), /Conventions/));
+test('lintPlan: a new file named in architecture.md must be listed explicitly by some task (a broad src/ owns nothing, bh9)', () => {
+  const arch = 'Entry: `src/main.ts`. Smoke: `scripts/smoke.ts`. Existing: `src/index.ts`. Test: `tests/a.test.ts`.';
+  const o = { ...opts, architecture: arch, exists: (p: string) => p === 'src/index.ts' };
+  const e = lintPlan([T('a', { paths: ['src/'] }), T('b', { paths: ['scripts/'], deps: ['a'] })], o);
+  assert.ok(e.some((m) => /src\/main\.ts/.test(m) && /no task lists/.test(m)), e.join('|'));
+  assert.ok(e.some((m) => /scripts\/smoke\.ts/.test(m)));
+  assert.ok(!e.some((m) => /src\/index\.ts|tests\/a/.test(m)), 'existing files and tests are exempt');
+  assert.deepEqual(lintPlan([T('a', { paths: ['src/main.ts'] }), T('b', { paths: ['scripts/smoke.ts'], deps: ['a'] })], o), []);
+});
