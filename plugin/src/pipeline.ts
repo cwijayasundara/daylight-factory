@@ -71,7 +71,7 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
 
   if (!rs.phases.design) { // ADR-023: environment checks before any model is paid for
     const brown = existsSync(join(cwd, '.daylight/ingest/conventions.md'));
-    const pf = await ph('preflight', () => preflight(cwd, cfg, { base: o.base, runSensors: (d) => (brown ? (() => { const r = runFast(d, cfg); return { ok: r.ok, messages: r.results.flatMap((x) => x.messages).join(' | ') }; })() : { ok: true, messages: '' }) }));
+    const pf = await ph('preflight', () => preflight(cwd, cfg, { base: o.base, title: wi.title, runSensors: (d) => (brown ? (() => { const r = runFast(d, cfg); return { ok: r.ok, messages: r.results.flatMap((x) => x.messages).join(' | ') }; })() : { ok: true, messages: '' }) }));
     append(f, { kind: 'x_preflight', phase: 'preflight', ok: !pf.length, errors: pf });
     if (pf.length) return stop('preflight', pf.join('\n'));
   }

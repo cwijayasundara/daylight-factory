@@ -11,7 +11,7 @@ export function composePorts(yaml: string): number[] {
 }
 const free = (port: number) => new Promise<boolean>((res) => { const s = createServer(); s.once('error', () => res(false)); s.listen(port, '0.0.0.0', () => s.close(() => res(true))); });
 
-export async function preflight(cwd: string, cfg: any, o: { base: string; docker?: string; runSensors: (cwd: string) => { ok: boolean; messages: string } }): Promise<string[]> {
+export async function preflight(cwd: string, cfg: any, o: { base: string; title?: string; docker?: string; runSensors: (cwd: string) => { ok: boolean; messages: string } }): Promise<string[]> {
   const errs: string[] = [];
   const s = o.runSensors(cwd);
   if (!s.ok) errs.push('baseline is red before any change (' + s.messages.slice(0, 300) + '): every task would fail on pre-existing problems; fix the baseline first');
@@ -20,6 +20,10 @@ export async function preflight(cwd: string, cfg: any, o: { base: string; docker
     if (d.status !== 0) errs.push('docker is not available (docker info failed): start Docker before running, deploy needs it');
     const cf = join(cwd, cfg.deploy.compose_file ?? 'docker-compose.yml');
     if (existsSync(cf)) for (const p of composePorts(readFileSync(cf, 'utf8'))) if (!(await free(p))) errs.push('port ' + p + ' (published by ' + cfg.deploy.compose_file + ') is already in use: stop the process or container holding it');
+  }
+  if (o.title) { // a previous run of this very feature was squash-merged into the base: generators would find the behaviour "already present" and fail TDD
+    const prior = git(cwd, ['log', '--format=%s', o.base]).stdout.split('\n').find((s) => s.startsWith('Daylight: ' + o.title + ' (#') || s === 'Daylight: ' + o.title);
+    if (prior) errs.push('base ' + o.base + ' already contains this feature ("' + prior + '"): run from a throwaway branch at the commit before it, not from a base that a previous run merged into');
   }
   if (git(cwd, ['remote']).stdout.trim() && git(cwd, ['rev-parse', '--verify', '-q', o.base]).status === 0) {
     git(cwd, ['fetch', '-q', 'origin', o.base]);

@@ -11,7 +11,7 @@ Resume from here after clearing context. Repo: /Users/cwijayasundaragmail.com/Do
 
 ## Results so far
 - Greenfield: SUCCESS on the final harness (run gh3): PR #3, Docker on :8080, smoke passed, 0 touchpoints, 840 s, $2.37.
-- Greenfield second run gh5 (from throwaway branch gh5-base): PR #4, 0 touchpoints, 897 s, $2.15 (docs/demos/greenfield-gh5.json). GOTCHA: runs squash-merge into their base branch, so remote `baseline` on both sample repos now contains gh3/bh8 output (restoring needs a force-push, denied by the classifier): create a throwaway branch at the original commit (greenfield 780ff09, brownfield 86591ed) per run.
+- Greenfield second run gh5 (from throwaway branch gh5-base): PR #4, 0 touchpoints, 897 s, $2.15 (docs/demos/greenfield-gh5.json). GOTCHA: runs squash-merge into their base branch, so remote `baseline` on both sample repos now contains gh3/bh8 output (restoring needs a force-push, denied by the classifier): preflight now refuses a base that already contains the feature (matches the "Daylight: <title>" squash commit); create a throwaway branch at the original commit (greenfield 780ff09, brownfield 86591ed) per run.
 - Brownfield: SUCCESS (run bh8, first of 8): PR #5 merged, Docker on :8081, smoke passed, 2 touchpoints (t3 escalated twice, resumed), 1361 s over 5 sessions, ~$4.80. Live bugs fixed test-first: config-only tasks skip TDD, no waiver prompt for them, scope measured from x_task_start.base.
 - Code Mode benchmark: no savings claimed (docs/demos/code-mode-benchmark.md).
 

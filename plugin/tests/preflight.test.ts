@@ -31,3 +31,10 @@ test('preflight: base behind its remote is an error', async () => {
   const other = tmp(); sh(other, 'git clone -q ' + up + ' . && git -c user.name=t -c user.email=t@t commit -q --allow-empty -m ahead && git push -q origin main');
   assert.match((await run(d, okDocker(d)))[0], /behind origin\/main/);
 });
+test('ADR-023 preflight: a base that already holds this feature (a squash-merged "Daylight: <title>" commit) stops the run', async () => {
+  const d = repo(); sh(d, 'git -c user.name=t -c user.email=t@t commit -q --allow-empty -m "Daylight: Notes API (#3)"');
+  const e = await run(d, okDocker(d), { title: 'Notes API' });
+  assert.ok(e.some((m) => /already (contains|holds)/.test(m) && /Notes API/.test(m)), e.join('|'));
+  assert.deepEqual(await run(d, okDocker(d), { title: 'Billing' }), []);
+  assert.deepEqual(await run(d, okDocker(d)), []);
+});
