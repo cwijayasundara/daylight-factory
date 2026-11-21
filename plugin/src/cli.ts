@@ -37,6 +37,36 @@ if (cmd === 'config') {
     if (errs.length) fail(errs.join('\n'));
     console.log('ok');
   }
+} else if (cmd === 'workitem') {
+  const { normalize } = await import('./workitem.ts');
+  console.log(JSON.stringify(normalize(rest[0]), null, 2));
+} else if (cmd === 'triage') {
+  const { normalize } = await import('./workitem.ts');
+  const { triage } = await import('./triage.ts');
+  const { resolveConfig } = await import('./config.ts');
+  const cfg = resolveConfig(process.cwd(), { config: opt('config'), base: opt('base') });
+  console.log(JSON.stringify(triage(normalize(rest[0]), cfg, process.cwd(), (opt('paths') ?? '').split(',').filter(Boolean)), null, 2));
+} else if (cmd === 'policy') {
+  const { gatePolicy } = await import('./tiers.ts');
+  const { resolveConfig } = await import('./config.ts');
+  console.log(JSON.stringify(gatePolicy(opt('tier') as any, resolveConfig(process.cwd(), { config: opt('config'), base: opt('base') }), flag('degraded'))));
+} else if (cmd === 'trigger' && rest[0] === 'run') {
+  const { readdirSync, mkdirSync, writeFileSync } = await import('node:fs');
+  const { normalize } = await import('./workitem.ts');
+  const { triage } = await import('./triage.ts');
+  const { resolveConfig } = await import('./config.ts');
+  const inbox = opt('inbox') ?? join(process.cwd(), '.daylight/inbox');
+  const cfg = resolveConfig(process.cwd(), { base: opt('base') });
+  mkdirSync(join(process.cwd(), '.daylight/work'), { recursive: true });
+  for (const f of readdirSync(inbox).filter((n) => n.endsWith('.md'))) {
+    const wi = normalize(join(inbox, f));
+    const t = triage(wi, cfg, process.cwd());
+    writeFileSync(join(process.cwd(), '.daylight/work', wi.id + '.json'), JSON.stringify({ ...wi, triage: t, status: t.route === 'human' ? 'needs_human' : 'triaged' }, null, 2));
+  }
+  console.log('ok');
+} else if (cmd === 'env-clean') {
+  const { cleanEnv } = await import('./guard.ts');
+  console.log(JSON.stringify(cleanEnv(process.env)));
 } else if (cmd === 'selfcheck' && rest[0] === 'no-codemode-var') {
   const hits = noCodeModeVar(PLUGIN);
   if (hits.length) fail('Code Mode variable referenced in: ' + hits.join(', '));

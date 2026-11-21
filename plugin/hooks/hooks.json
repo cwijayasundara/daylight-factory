@@ -9,6 +9,15 @@
             "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hook.ts"
           }
         ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/guard.ts"
+          }
+        ]
       }
     ],
     "PostToolUse": [

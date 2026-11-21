@@ -44,7 +44,7 @@ const COMMON = ['id', 'ts', 'run', 'kind', 'sha_prev'];
 export const KINDS: Record<string, string[]> = {
   doctor: ['summary'], tool_pre: ['tool'], tool_post: ['tool'], repl_pre: ['code'], repl_post: ['code'],
   subagent_start: ['role'], subagent_stop: ['role', 'tokens'], sensor: ['name', 'ok'], verdict: ['role', 'verdict'],
-  gate: ['gate', 'decision', 'source'], phase: ['name'],
+  gate: ['gate', 'decision', 'source'], phase: ['name'], triage: ['work_item', 'tier', 'size', 'rationale'],
 };
 export function validateLog(file: string): string[] {
   const errs: string[] = [];

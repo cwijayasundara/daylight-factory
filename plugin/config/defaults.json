@@ -78,5 +78,16 @@
   "tiers": {
     "use_defaults": true,
     "rules": []
+  },
+  "credentials": {
+    "deny_patterns": [
+      "(^|[\\s/'\"`(])\\.env(\\.[A-Za-z0-9_-]+)*($|[\\s'\"`);])",
+      "\\.aws/",
+      "\\.ssh/",
+      "\\.config/gcloud",
+      "credentials\\.json",
+      "id_(rsa|ed25519)",
+      "\\.pem\\b"
+    ]
   }
 }
