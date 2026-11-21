@@ -2,10 +2,8 @@
 name: evaluator-rubric
 description: Rubric the Daylight evaluator uses to grade a task diff. Cited, binary criteria.
 ---
-Criteria (each pass/fail, fail needs file:line or test-name citation):
-1. **ac-met**: each AC in the task is asserted by a test that actually checks the behaviour (not a vacuous assert).
-2. **tdd**: tests were committed before implementation and fail without it.
-3. **srp**: each new function/class has one reason to change; no duplicated logic.
-4. **scope**: only allowed paths changed; nothing beyond the task.
-5. **no-defects**: no obvious bug, unhandled error or secret in the diff.
-Computational sensor results (tests, types, lint) decide pass/fail on their own: you cannot overrule a failing sensor.
+Three criteria (each pass/fail; a fail needs a file:line or test-name citation in a file this task may edit):
+1. **ac-met**: each acceptance criterion listed for the task is asserted by a test that checks the behaviour (not a vacuous assert). Judge against the AC text, not against architecture.md.
+2. **no-defects**: no obvious bug, unhandled error, duplicated logic or secret in the diff.
+3. **conventions** (only when the prompt includes repository conventions): the diff follows them; cite the convention.
+Not yours to judge, the harness already decided them: scope, TDD commit order, sensors (tests, types, lint, complexity). Do not cite files the task may not edit. Do not read .daylight/. You cannot overrule a failing sensor.

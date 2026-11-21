@@ -5,7 +5,8 @@ import { append, auditFile, readLines } from './lib/events.ts';
 
 const TEST = /(^|\/)(tests?|__tests__)\/|\.(test|spec)\.[jt]sx?$/;
 const SRC = /\.(tsx?|jsx?|py)$/;
-export function tddCheck(cwd: string, base: string, branch: string, task?: string): string[] {
+const after = (e: any, since: number) => Number(String(e.id).slice(1)) > since; // audit ids are e<line>: only events after the last reset count
+export function tddCheck(cwd: string, base: string, branch: string, task?: string, since = 0): string[] {
   const first = git(cwd, ['rev-list', '--reverse', base + '..' + branch]).stdout.split('\n').filter(Boolean)[0];
   if (!first) return ['no commits on ' + branch];
   const files = git(cwd, ['show', '--name-only', '--pretty=format:', first]).stdout.split('\n').filter(Boolean);
@@ -14,11 +15,11 @@ export function tddCheck(cwd: string, base: string, branch: string, task?: strin
   if (impl.length || !tests.length) errs.push('first commit ' + first.slice(0, 7) + ' contains implementation but no failing test (impl: ' + (impl.join(', ') || 'none') + ')');
   const tagged = tests.some((f) => /AC-\d+/.test(git(cwd, ['show', first + ':' + f]).stdout));
   if (tests.length && !tagged) errs.push('test files in the first commit carry no AC id (tag tests with AC-n)');
-  if (task && !readLines(auditFile(cwd)).some((l) => { const e = JSON.parse(l); return (e.kind === 'x_red' && e.task === task && e.failing) || (e.kind === 'x_tdd_waiver' && e.task === task && e.declared); })) errs.push('no red proof recorded for task ' + task + ' (run: daylight red --task ' + task + ' --cmd "<test command>"; if your new tests already pass because the behaviour exists, add --waive "<reason>")');
+  if (task && !readLines(auditFile(cwd)).some((l) => { const e = JSON.parse(l); if (!after(e, since)) return false; return (e.kind === 'x_red' && e.task === task && e.failing) || (e.kind === 'x_tdd_waiver' && e.task === task && e.declared); })) errs.push('no red proof recorded for task ' + task + ' (run: daylight red --task ' + task + ' --cmd "<test command>"; if your new tests already pass because the behaviour exists, add --waive "<reason>")');
   return errs;
 }
-export function waiverFor(cwd: string, task: string): string {
-  const w = readLines(auditFile(cwd)).map((l) => JSON.parse(l)).filter((e) => e.kind === 'x_tdd_waiver' && e.task === task && e.declared).pop();
+export function waiverFor(cwd: string, task: string, since = 0): string {
+  const w = readLines(auditFile(cwd)).map((l) => JSON.parse(l)).filter((e) => e.kind === 'x_tdd_waiver' && e.task === task && e.declared && after(e, since)).pop();
   return w ? w.reason : '';
 }
 export function recordRed(cwd: string, task: string, cmd: string, waive?: string): string | null {

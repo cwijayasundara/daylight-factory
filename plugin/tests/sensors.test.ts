@@ -155,14 +155,13 @@ test('AC-106 scope is measured from where the task branched, not from main (desi
   const r = cli(['scope', 'check', '--plan', p, '--base', 'main'], { cwd: d });
   assert.equal(r.code, 0, r.err);
 });
-test('AC-106 a TDD task may always add its own tests; a tdd:false task may not; source outside paths is still flagged', () => {
+test('AC-106 any task may add test files (the plan flag no longer matters); source outside paths is still flagged', () => {
   const d = tmp(); put(d, 'README.md', 'x');
   sh(d, 'git init -q -b main && git add -A && git -c user.name=t -c user.email=t@t commit -qm init');
   for (const id of ['t1', 't2']) { sh(d, 'git checkout -q main && git checkout -qb daylight/' + id); put(d, 'tests/' + id + '.test.ts', '1'); put(d, 'Dockerfile', id); sh(d, 'git add -A && git -c user.name=t -c user.email=t@t commit -qm w'); }
   const plan = (tdd: boolean) => put(d, 'plan.json', JSON.stringify({ tasks: ['t1', 't2'].map((id) => ({ id, title: 't', acs: [], paths: ['Dockerfile'], deps: [], tdd })) }));
   assert.equal(cli(['scope', 'check', '--plan', plan(true), '--base', 'main'], { cwd: d }).code, 0);
-  const r = cli(['scope', 'check', '--plan', plan(false), '--base', 'main'], { cwd: d });
-  assert.notEqual(r.code, 0); assert.match(r.err, /tests\/t1\.test\.ts/);
+  assert.equal(cli(['scope', 'check', '--plan', plan(false), '--base', 'main'], { cwd: d }).code, 0);
   put(d, 'src/stray.ts', '1'); sh(d, 'git checkout -q daylight/t1 && git add -A && git -c user.name=t -c user.email=t@t commit -qm stray');
   assert.match(cli(['scope', 'check', '--plan', plan(true), '--base', 'main'], { cwd: d }).err, /src\/stray\.ts/);
 });

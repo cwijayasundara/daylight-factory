@@ -113,7 +113,7 @@ if (cmd === 'config') {
   const { tddCheck } = await import('./tdd.ts');
   const e = tddCheck(process.cwd(), opt('base') ?? 'main', opt('branch')!, opt('task')); if (e.length) fail(e.join('\n')); console.log('ok');
 } else if (cmd === 'red') {
-  const { recordRed } = await import('./tdd.ts'); const e = recordRed(process.cwd(), opt('task')!, opt('cmd')!, opt('waive')); if (e) fail(e); console.log('ok');
+  const { recordRed } = await import('./tdd.ts'); if (!opt('task') || !opt('cmd')) fail('daylight red needs --task <id> and --cmd "<test command>"'); const e = recordRed(process.cwd(), opt('task')!, opt('cmd')!, opt('waive')); if (e) fail(e); console.log('ok');
 } else if (cmd === 'verdict' && rest[0] === 'normalize') {
   const { normalize } = await import('./verdict.ts'); const { readFileSync } = await import('node:fs');
   try { const { withMatrix } = await import('./verdict.ts'); const v = normalize(JSON.parse(readFileSync(rest[1], 'utf8'))); console.log(JSON.stringify(opt('matrix') ? withMatrix(v, JSON.parse(readFileSync(opt('matrix')!, 'utf8'))) : v)); } catch (e) { fail((e as Error).message); }

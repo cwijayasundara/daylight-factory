@@ -6,8 +6,8 @@ import { extractJson } from './lib/json.ts';
 import { git } from './worktree.ts';
 import { append, auditFile, readLines } from './lib/events.ts';
 import { loadPlan } from './plan.ts';
+import { editablePaths, isEditable } from './contract.ts';
 
-const TEST_FILE = /(^|\/)(tests?|__tests__)\/|\.(test|spec)\.[jt]sx?$/; // a TDD task always owns its own tests (strict TDD requires committing them)
 const PLUGIN = new URL('..', import.meta.url).pathname;
 export async function judge(cwd: string, cfg: any, o: { spec: string; task?: string; base?: string }) {
   const diff = git(cwd, ['diff', (o.base ?? 'main') + '...HEAD']).stdout.slice(0, 30000);
@@ -27,12 +27,13 @@ const startOf = (cwd: string, task: string): string => {
 };
 export function scopeCheck(cwd: string, planFile: string, base: string): string[] {
   const errs: string[] = [];
-  for (const t of loadPlan(planFile)) {
+  const tasks = loadPlan(planFile);
+  for (const t of tasks) {
     if (git(cwd, ['rev-parse', '--verify', '-q', 'daylight/' + t.id]).status !== 0) continue;
     {
       const rec = startOf(cwd, t.id), from = (rec && git(cwd, ['merge-base', rec, 'daylight/' + t.id]).stdout.trim()) || git(cwd, ['reflog', 'show', '--format=%H', 'daylight/' + t.id]).stdout.trim().split('\n').pop() || base; // where the latest attempt started (a resumed task is rebased onto the run head), else where the branch was created
       for (const f of git(cwd, ['diff', '--name-only', from + '..daylight/' + t.id]).stdout.split('\n').filter(Boolean))
-      if (!t.paths.some((p) => f.startsWith(p)) && !(t.tdd !== false && TEST_FILE.test(f))) errs.push(f + ' changed by task ' + t.id + ' outside its declared paths (' + t.paths.join(', ') + ')');
+      if (!isEditable(f, editablePaths(t, tasks))) errs.push(f + ' changed by task ' + t.id + ' outside its declared paths (' + editablePaths(t, tasks).join(', ') + ')');
     }
   }
   return errs;
