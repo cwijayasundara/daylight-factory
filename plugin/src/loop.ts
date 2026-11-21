@@ -10,7 +10,8 @@ import { generatorContext } from './context.ts';
 import { scopeViolations, repeatsPrevious, classifyFailure, editablePaths, needsFreshStart } from './contract.ts';
 import { tddCheck, waiverFor } from './tdd.ts';
 import { append, auditFile, readLines } from './lib/events.ts';
-import { tddApplies, type Task } from './plan.ts';
+import { taskMode, acModes, type Task } from './plan.ts';
+import { verifyDelivery } from './delivery.ts';
 import { tddInstruction, generatorContract, evaluatorPrompt } from './context.ts';
 
 const PLUGIN = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -32,7 +33,8 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
   const file = auditFile(cwd);
   const wt = addWorktree(cwd, t.id);
   append(file, { kind: 'x_task_start', phase: 'inner', task: t.id, base: wt.base });
-  if (!tddApplies(t)) append(file, { kind: 'x_tdd_waiver', phase: 'inner', task: t.id, reason: t.tdd === false ? 'planner marked the task as having no new behaviour' : 'config-only task: no code paths to test first' });
+  const specText = opts.spec && existsSync(opts.spec) ? readFileSync(opts.spec, 'utf8') : '', mode = taskMode(t, acModes(specText)), tdd = mode === 'tdd';
+  if (!tdd) append(file, { kind: 'x_tdd_waiver', phase: 'inner', task: t.id, reason: mode === 'run' ? 'delivery task: proven by running it, not by a unit test' : 'no behaviour ACs to test first' });
   let feedback = '', diff = '', prevComp: string[] | undefined, citeHistory: string[][] = [], fail: { cls: string; reason: string } = { cls: 'generator', reason: 'retry cap reached' }, since = 0;
   const editable = editablePaths(t, opts.tasks ?? [t]), lineCount = () => readLines(file).length;
   const rubric = readFileSync(join(PLUGIN, 'skills/evaluator-rubric/SKILL.md'), 'utf8').replace(/^---[\s\S]*?---\s*/, '');
@@ -42,7 +44,7 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
   for (let n = 1; n <= attempts; n++) {
     const effort = effortFor(t, n, cfg), attemptStart = lineCount();
     const prompt = 'Task ' + t.id + ': ' + t.title + '\nAcceptance criteria: ' + t.acs.join(', ') + '\n' + generatorContract(t, opts.tasks ?? [t]) + '\n\n' + ctx + '\n' +
-      tddInstruction(t, join(PLUGIN, 'src/cli.ts'), cfg.sensors.commands.tests ?? 'npm test') + (t.feedback ? '\n\n## Review findings to fix\n' + t.feedback : '') + (n > 1 ? '\n\n## Diff so far\n' + diff + '\n\n## Cited feedback to fix\n' + feedback : '');
+      tddInstruction(t, join(PLUGIN, 'src/cli.ts'), cfg.sensors.commands.tests ?? 'npm test', mode) + (t.feedback ? '\n\n## Review findings to fix\n' + t.feedback : '') + (n > 1 ? '\n\n## Diff so far\n' + diff + '\n\n## Cited feedback to fix\n' + feedback : '');
     append(file, { kind: 'x_context', phase: 'inner', task: t.id, attempt: n, role: 'generator', tokens: Math.ceil(prompt.length / 4), chars: prompt.length, budget: cfg.context.budget_tokens, over_budget: Math.ceil(prompt.length / 4) > cfg.context.budget_tokens });
     append(file, { kind: 'x_dispatch', phase: 'inner', task: t.id, attempt: n, role: 'generator', model: cfg.models.generator, effort });
     const g = await claude(['-p', prompt, '--agent', 'daylight:generator', '--model', cfg.models.generator, '--effort', effort, '--plugin-dir', PLUGIN, '--output-format', 'json', '--allowedTools', 'Read,Write,Edit,Bash,Grep,Glob'], wt.path, { DAYLIGHT_ROLE: 'generator', DAYLIGHT_RUN: process.env.DAYLIGHT_RUN ?? '', DAYLIGHT_AUDIT_ROOT: cwd });
@@ -53,8 +55,13 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
     const computational: string[] = [];
     computational.push(...scopeViolations(git(wt.path, ['diff', '--name-only', git(wt.path, ['merge-base', wt.base, 'HEAD']).stdout.trim() || wt.base, 'HEAD']).stdout.split('\n').filter(Boolean), t, cfg.guard?.protected_paths ?? [], editable));
     if (!diff.trim()) computational.push('the attempt changed nothing relative to the task start: there is nothing to evaluate (behaviour already present, or the task has no work)');
-    if (tddApplies(t) && diff.trim()) computational.push(...tddCheck(cwd, wt.base, wt.branch, t.id, since));
+    if (tdd && diff.trim()) computational.push(...tddCheck(cwd, wt.base, wt.branch, t.id, since));
     if (opts.sensors) { const s = await opts.sensors(wt.path, t); if (!s.ok) computational.push(s.messages); }
+    if (mode === 'run' && !computational.length) { // a delivery is proven by running it: build, health, smoke (no LLM can judge that)
+      const dv = await verifyDelivery(wt.path, cfg); append(file, { kind: 'x_delivery', phase: 'inner', task: t.id, attempt: n, ok: dv.ok, msg: dv.msg.slice(0, 300) });
+      if (!dv.ok) computational.push('delivery check failed: ' + dv.msg);
+      else { append(file, { kind: 'verdict', phase: 'inner', role: 'harness', task: t.id, attempt: n, verdict: 'pass', evaluator_verdict: 'skipped', computational: [] }); append(file, { kind: 'x_task_end', phase: 'inner', task: t.id, status: 'passed', attempts: n }); return 'passed'; }
+    }
     if (computational.length) { // contract failed: the verdict is already fail (ADR-002), so skip the paid evaluator and feed the messages back
       append(file, { kind: 'verdict', phase: 'inner', role: 'harness', task: t.id, attempt: n, verdict: 'fail', evaluator_verdict: 'skipped', computational });
       const repeated = repeatsPrevious(prevComp, computational); prevComp = computational;
@@ -70,7 +77,7 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
       continue;
     }
     prevComp = undefined;
-    const waiver = tddApplies(t) ? waiverFor(cwd, t.id, attemptStart) : ''; // only a waiver declared in THIS attempt, never one from a discarded attempt
+    const waiver = tdd ? waiverFor(cwd, t.id, attemptStart) : ''; // only a waiver declared in THIS attempt, never one from a discarded attempt
     const acText = t.acs.map((a) => { const m = new RegExp('\\*\\*' + a + '\\*\\*\\s*(.*)').exec(opts.spec ? rd(opts.spec) : ''); return a + (m ? ': ' + m[1].trim() : ''); });
     const ep = evaluatorPrompt({ task: t, acText, editable, diff, rubric, waiver, extra: (opts.evaluatorExtra ? await opts.evaluatorExtra(wt.path, t) : '') + (t.feedback ? '\nFindings this task must fix:\n' + t.feedback : '') });
     const eEffort = n >= 3 ? 'high' : cfg.effort.evaluator;

@@ -101,8 +101,7 @@ if (cmd === 'config') {
 } else if (cmd === 'plan' && rest[0] === 'lint') {
   const { loadPlan } = await import('./plan.ts'); const { lintPlan } = await import('./planlint.ts'); const { resolveConfig } = await import('./config.ts'); const { readFileSync } = await import('node:fs');
   const cfg = resolveConfig(process.cwd(), { base: opt('base') });
-  const { existsSync } = await import('node:fs'); const { join, dirname } = await import('node:path'); const archF = join(dirname(opt('spec')!), 'architecture.md');
-  const e = lintPlan(loadPlan(opt('plan')!), { protectedGlobs: cfg.guard.protected_paths, spec: readFileSync(opt('spec')!, 'utf8'), requiredSensors: cfg.sensors.required, architecture: existsSync(archF) ? readFileSync(archF, 'utf8') : '', exists: (p) => existsSync(p) }); if (e.length) fail(e.join('\n')); console.log('ok');
+  const e = lintPlan(loadPlan(opt('plan')!), { protectedGlobs: cfg.guard.protected_paths, spec: readFileSync(opt('spec')!, 'utf8'), requiredSensors: cfg.sensors.required }); if (e.length) fail(e.join('\n')); console.log('ok');
 } else if (cmd === 'plan' && rest[0] === 'check') {
   const { checkPlan, loadPlan } = await import('./plan.ts');
   const { readFileSync } = await import('node:fs');
@@ -121,7 +120,7 @@ if (cmd === 'config') {
   const { runInner } = await import('./loop.ts'); const { loadPlan } = await import('./plan.ts'); const { resolveConfig } = await import('./config.ts');
   const cfg = resolveConfig(process.cwd(), { config: opt('config'), base: opt('base') });
   const { runFast } = await import('./sensors.ts');
-  console.log(JSON.stringify(await runInner(process.cwd(), loadPlan(opt('plan')!), cfg, { sensors: async (wt) => { const r = runFast(wt, cfg); return { ok: r.ok, messages: r.results.flatMap((x) => x.messages).join('\n') }; } })));
+  console.log(JSON.stringify(await runInner(process.cwd(), loadPlan(opt('plan')!), cfg, { spec: opt('spec'), sensors: async (wt) => { const r = runFast(wt, cfg); return { ok: r.ok, messages: r.results.flatMap((x) => x.messages).join('\n') }; } })));
 } else if (cmd === 'sensors') {
   const S = await import('./sensors.ts'); const { resolveConfig } = await import('./config.ts');
   const cwd = process.cwd(), cfg = resolveConfig(cwd, { config: opt('config'), base: opt('base') });
@@ -133,7 +132,9 @@ if (cmd === 'config') {
   const T = await import('./trace.ts'); const { resolveConfig } = await import('./config.ts'); const { readFileSync, writeFileSync, mkdirSync } = await import('node:fs');
   const cfg = resolveConfig(process.cwd(), { config: opt('config') });
   const cmdline = opt('cmd') ?? (cfg.sensors.commands.tests ?? 'node --test') + (/test-reporter|^npm /.test(cfg.sensors.commands.tests ?? '') ? '' : ' --test-reporter=tap');
-  const rows = T.matrix(readFileSync(opt('spec')!, 'utf8'), T.runTests(process.cwd(), cmdline));
+  const { readLines, auditFile } = await import('./lib/events.ts'); const evs = readLines(auditFile(process.cwd())).map((l) => JSON.parse(l));
+  const sensors: Record<string, boolean> = {}; for (const e of evs) if (e.kind === 'sensor') sensors[e.name] = !!e.ok; // latest result per sensor
+  const rows = T.matrix(readFileSync(opt('spec')!, 'utf8'), T.runTests(process.cwd(), cmdline), { delivery: evs.some((e) => e.kind === 'x_delivery' && e.ok === true), sensors });
   mkdirSync(join(process.cwd(), '.daylight'), { recursive: true }); writeFileSync(join(process.cwd(), '.daylight/trace.json'), JSON.stringify({ rows }, null, 2));
   console.log(T.render(rows)); if (rows.some((r) => r.result !== 'PASS')) process.exit(1);
 } else if (cmd === 'review') {

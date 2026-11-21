@@ -6,7 +6,7 @@ Reuses Superpowers `brainstorming` and mattpocock `grill-with-docs` / `to-spec`;
 
 1. `daylight prd check <prd>` (refuse if the NFR section is missing).
 2. Read the wiki/conventions if brownfield. Use the Superpowers brainstorming flow to settle open questions; ask the human only for decisions the PRD cannot answer.
-3. Write to the design dir (`daylight config --resolved`.design_dir): `intent.md` (## Why, ## Success criteria with numbers), `spec.md` (one `- **AC-n** <observable condition>` per criterion, unique ids), `architecture.md` (ADRs with Status/Context/Decision/Consequences, and an `NFR mapping` table with a row `| NFR-n | mechanism |` per PRD NFR).
+3. Write to the design dir (`daylight config --resolved`.design_dir): `intent.md` (## Why, ## Success criteria with numbers), `spec.md` (one `- **AC-n** [test|run|sensor:<name>] <observable condition>` per criterion, unique ids; [run] = proven by building and starting the container, [sensor:x] = proven by a sensor; one artefact and one mode per AC), `architecture.md` (ADRs with Status/Context/Decision/Consequences, and an `NFR mapping` table with a row `| NFR-n | mechanism |` per PRD NFR).
 4. Run `daylight design lint --prd <prd>`; fix every error.
 5. `daylight gate request design`, then present with `daylight gate present design`.
 6. Approver: human -> ask and record `daylight gate decide design --decision approve|reject|edit --source human [--feedback ...]`; agent -> `daylight gate agent design`.

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { tddApplies } from '../src/plan.ts';
 import { tddInstruction } from '../src/context.ts';
 
-const t = (paths: string[], tdd?: boolean) => ({ id: 't', title: 'x', acs: [], paths, deps: [], tdd });
+const t = (paths: string[], tdd?: boolean) => ({ id: 't', title: 'x', acs: ['AC-1'], paths, deps: [], tdd });
 test('tddApplies: code paths keep TDD', () => {
   assert.equal(tddApplies(t(['src/a.ts'])), true);
   assert.equal(tddApplies(t(['src/a.ts', 'scripts/smoke.ts', 'package.json'])), true);
@@ -21,5 +21,5 @@ test('tddApplies: planner opt-out is honoured', () => {
 test('tddInstruction: code tasks get the red/waiver steps, config-only tasks get neither', () => {
   assert.match(tddInstruction(t(['src/a.ts']), 'cli.ts', 'npm test'), /red --task t --cmd "npm test"/);
   const c = tddInstruction(t(['Dockerfile']), 'cli.ts', 'npm test');
-  assert.doesNotMatch(c, /--waive|red --task/); assert.match(c, /no code paths/);
+  assert.doesNotMatch(c, /--waive|red --task/); assert.match(c, /no red step/);
 });

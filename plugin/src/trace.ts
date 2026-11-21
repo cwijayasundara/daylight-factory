@@ -1,14 +1,19 @@
 // Reuses: the test runner's TAP output (node --test --test-reporter=tap). Glue: AC id -> test-name mapping.
 import { spawnSync } from 'node:child_process';
-import { acIds } from './plan.ts';
+import { acIds, acModes } from './plan.ts';
 
-export interface Row { ac: string; tests: string[]; result: 'PASS' | 'FAIL' | 'NO TEST' }
+export interface Row { ac: string; tests: string[]; result: 'PASS' | 'FAIL' | 'NO TEST' | 'NO EVIDENCE' }
 export const parseTap = (out: string) => [
   ...[...out.matchAll(/^\s*(not ok|ok)\s+\d+\s+-\s+(.*?)(?:\s+#.*)?$/gm)].map((m) => ({ name: m[2], pass: m[1] === 'ok' })),
   ...[...out.matchAll(/^\s*([✔✖])\s+(.*?)\s+\([\d.]+ms\)\s*$/gm)].map((m) => ({ name: m[2], pass: m[1] === '✔' })), // spec reporter
 ];
-export function matrix(spec: string, results: { name: string; pass: boolean }[]): Row[] {
+export interface Evidence { delivery?: boolean; sensors?: Record<string, boolean> }
+export function matrix(spec: string, results: { name: string; pass: boolean }[], ev: Evidence = {}): Row[] {
+  const modes = acModes(spec);
   return [...new Set(acIds(spec))].map((ac) => {
+    const m = modes.get(ac);
+    if (m?.mode === 'run') return { ac, tests: ['delivery: build, health, smoke'], result: ev.delivery ? 'PASS' : 'NO EVIDENCE' } as Row;
+    if (m?.mode === 'sensor') return { ac, tests: ['sensor: ' + (m.sensor ?? '?')], result: m.sensor && ev.sensors?.[m.sensor] ? 'PASS' : 'NO EVIDENCE' } as Row;
     const hit = results.filter((r) => new RegExp('\\b' + ac + '\\b').test(r.name));
     return { ac, tests: hit.map((h) => h.name), result: !hit.length ? 'NO TEST' : hit.every((h) => h.pass) ? 'PASS' : 'FAIL' };
   });

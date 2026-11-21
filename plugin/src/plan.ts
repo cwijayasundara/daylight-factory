@@ -8,10 +8,26 @@ export function checkPlan(spec: string, tasks: Task[]): string[] {
   return acIds(spec).filter((a) => !covered.has(a)).map((a) => a + ' has no task');
 }
 
-/** TDD applies only when the task touches code; config-only tasks (Dockerfile, compose, docs) have no behaviour to test first. */
-// scripts/ (smoke clients, tooling) and package.json have no test to write first: they are verified by running them
+/** How an AC is proven: [test] by an AC-named automated test, [run] by building and starting the service, [sensor:x] by a named sensor. Untagged ACs are [test]. */
+export type AcMode = { mode: 'test' | 'run' | 'sensor'; sensor?: string };
+export function acModes(spec: string): Map<string, AcMode> {
+  const out = new Map<string, AcMode>();
+  for (const m of spec.matchAll(/\*\*(AC-\d+)\*\*\s*(?:\[(test|run|sensor)(?::([\w-]+))?\])?/g)) out.set(m[1], m[2] === 'run' ? { mode: 'run' } : m[2] === 'sensor' ? { mode: 'sensor', sensor: m[3] } : { mode: 'test' });
+  return out;
+}
+// Untagged specs (older designs) keep the path rule: scripts/ (smoke clients, tooling) and package.json have no test to write first
 const CODE_PATH = /^(src|tests?|lib|app)\/|^(?!scripts\/).*\.(tsx?|jsx?|py|mjs|cjs)$/;
-export const tddApplies = (t: Pick<Task, 'paths' | 'tdd'>) => t.tdd !== false && t.paths.some((p) => CODE_PATH.test(p));
+const tagged = (spec: Map<string, AcMode>, t: Pick<Task, 'acs'>) => t.acs.some((a) => spec.has(a)) && [...spec.values()].some((m) => m.mode !== 'test');
+/** tdd: write failing tests first. run: proven by executing the delivery. none: nothing to prove before merge. */
+export function taskMode(t: Pick<Task, 'acs' | 'paths' | 'tdd'>, modes: Map<string, AcMode> = new Map()): 'tdd' | 'run' | 'none' {
+  if (t.tdd === false || !t.acs.length) return 'none';
+  if (tagged(modes, t)) {
+    const ms = t.acs.map((a) => modes.get(a)?.mode ?? 'test');
+    return ms.includes('test') ? 'tdd' : ms.includes('run') ? 'run' : 'none';
+  }
+  return t.paths.some((p) => CODE_PATH.test(p)) ? 'tdd' : 'none';
+}
+export const tddApplies = (t: Pick<Task, 'acs' | 'paths' | 'tdd'>, modes: Map<string, AcMode> = new Map()) => taskMode(t, modes) === 'tdd';
 
 /** Small, low-tier work: Gate 1 skips the Opus approver and the plan is one task (ADR-023). */
 export const isFastPath = (t: { size: string; tier: string }, cfg: { fast_path?: boolean }) => cfg.fast_path !== false && t.size === 'small' && t.tier === 'low';

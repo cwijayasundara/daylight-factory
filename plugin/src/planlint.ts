@@ -1,11 +1,11 @@
 // Reuses: globRe (tiers.ts), acIds spec format (plan.ts). Glue: deterministic plan checks run before any task starts.
 import { globRe } from './tiers.ts';
-import type { Task } from './plan.ts';
+import { acModes, type Task } from './plan.ts';
 
 const META: [RegExp, string][] = [[/\bcoverage\b/i, 'coverage'], [/\bcomplexity\b/i, 'complexity'], [/\bduplicat/i, 'duplication'], [/\b(dependency layer|layering|import boundar)/i, 'layers'], [/\b(vulnerab|advisor)/i, 'advisories']];
 const overlaps = (a: string, b: string) => a.startsWith(b) || b.startsWith(a);
 
-export function lintPlan(tasks: Task[], o: { protectedGlobs: string[]; spec: string; requiredSensors: string[]; architecture?: string; exists?: (p: string) => boolean }): string[] {
+export function lintPlan(tasks: Task[], o: { protectedGlobs: string[]; spec: string; requiredSensors: string[] }): string[] {
   const errs: string[] = [], ids = new Set(tasks.map((t) => t.id));
   for (const t of tasks) for (const d of t.deps) if (!ids.has(d)) errs.push('task ' + t.id + ' depends on unknown task ' + d);
   // dependency closure, also used to decide which tasks can run in parallel
@@ -20,20 +20,13 @@ export function lintPlan(tasks: Task[], o: { protectedGlobs: string[]; spec: str
     const hit = a.paths.flatMap((p) => b.paths.filter((q) => overlaps(p, q)).map((q) => p + ' / ' + q))[0];
     if (hit) errs.push('independent tasks ' + a.id + ' and ' + b.id + ' have overlapping paths (' + hit + '): add a dependency or split the paths');
   }
-  // a new file the design names needs an explicit owner: a broad directory in several tasks makes each assume another creates it
-  const explicit = new Set(tasks.flatMap((t) => t.paths));
-  for (const p of new Set([...(o.architecture ?? '').matchAll(/`([\w.-]+(?:\/[\w.-]+)+\.[a-z]{1,4})`/g)].map((m) => m[1]))) {
-    if (/^(tests?|docs)\//.test(p) || o.exists?.(p) || explicit.has(p)) continue;
-    errs.push(p + ' is named in architecture.md but no task lists it explicitly in its paths: put it in the paths of the task that creates it');
-  }
-  // an AC that names a file only another task owns cannot be met by its own task (bh11: AC-17 named the Dockerfile and src/main.ts)
-  const owns = (t: Task, f: string) => t.paths.some((p) => p === f || (p.endsWith('/') && f.startsWith(p)));
-  for (const m of o.spec.matchAll(/\*\*(AC-\d+)\*\*\s*(.*)/g)) {
-    const files = [...new Set([...m[2].matchAll(/(?:[\w.-]+\/)+[\w.-]+\.[a-z]{1,4}\b|\bDockerfile\b|\bdocker-compose\.yml\b/g)].map((x) => x[0]))];
-    for (const t of tasks.filter((x) => x.acs.includes(m[1]))) for (const f of files) {
-      const owner = tasks.find((x) => x.id !== t.id && owns(x, f));
-      if (!owns(t, f) && owner) errs.push(m[1] + ' names ' + f + ' which task ' + owner.id + ' owns but its task ' + t.id + ' does not: give ' + t.id + ' that path (it already depends on the owner) or move ' + m[1] + ' to ' + owner.id);
-    }
+  // [run] ACs are proven by executing the delivery: they belong in exactly one task, run last, that mixes in no test ACs
+  const modes = acModes(o.spec), runTasks = tasks.filter((t) => t.acs.some((a) => modes.get(a)?.mode === 'run'));
+  if (runTasks.length > 1) errs.push('[run] acceptance criteria are spread over tasks ' + runTasks.map((t) => t.id).join(', ') + ': put them all in ONE delivery task');
+  for (const t of runTasks) {
+    if (t.acs.some((a) => (modes.get(a)?.mode ?? 'test') === 'test')) errs.push('task ' + t.id + ' mixes [run] and [test] acceptance criteria: the delivery task holds only [run] ACs (move the [test] ones to a behaviour task)');
+    const others = tasks.filter((x) => x.id !== t.id && !up.get(t.id)!.has(x.id));
+    if (others.length) errs.push('delivery task ' + t.id + ' must run last: it needs to depend on ' + others.map((x) => x.id).join(', '));
   }
   const planned = new Set(tasks.flatMap((t) => t.acs));
   for (const m of o.spec.matchAll(/\*\*(AC-\d+)\*\*\s*(.*)/g)) {

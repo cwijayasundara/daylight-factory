@@ -13,8 +13,9 @@ export function generatorContext(t: Pick<Task, 'acs'>, o: { spec: string; sensor
 }
 
 /** The TDD paragraph of the generator prompt. Config-only tasks (no code paths) get no red step and no waiver to declare. */
-export function tddInstruction(t: Task, cli: string, testCmd: string): string {
-  if (!tddApplies(t)) return '\nThis task touches no code paths, so there is no red step: do not run the red command or declare a waiver. Implement the change, keep to the allowed paths, and commit.';
+export function tddInstruction(t: Task, cli: string, testCmd: string, mode: 'tdd' | 'run' | 'none' = tddApplies(t) ? 'tdd' : 'none'): string {
+  if (mode === 'run') return '\nThis is the delivery task: it is verified by actually building and starting the service (docker compose up --build, the health command, the smoke command), not by unit tests. There is no red step and no waiver. Make it work, run those commands yourself if you can, and commit.';
+  if (mode !== 'tdd') return '\nThere is no red step for this task: do not run the red command or declare a waiver. Implement the change and commit.';
   return '\nFollow TDD with separate commits: (1) write failing tests whose names contain their AC id, run: node ' + cli + ' red --task ' + t.id + ' --cmd "' + testCmd + '" (it must exit 0 = recorded red; if your new tests already pass because the behaviour exists, run the same command with --waive "<reason>" instead: the waiver is logged and the evaluator will judge it), then git add -A && git commit -m "test: ..."; (2) implement until green; commit. Stay in the allowed paths.';
 }
 

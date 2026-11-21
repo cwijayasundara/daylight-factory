@@ -30,6 +30,8 @@ export function lint(dir: string, prdText?: string): string[] {
     for (const [, id, text] of acs) {
       if (seen.has(id)) errs.push('spec.md: duplicate ' + id);
       seen.add(id);
+      const tag = /^\[([^\]]*)\]/.exec(text)?.[1];
+      if (tag !== undefined && !/^(test|run|sensor:[\w-]+)$/.test(tag)) errs.push('spec.md: ' + id + ' has an invalid verification tag [' + tag + '] (use [test], [run] or [sensor:<name>]' + (tag === 'sensor' ? '; a sensor tag needs the sensor name' : '') + ')');
       if (!VERB.test(text)) errs.push('spec.md: ' + id + ' has no verifiable condition (use an observable verb or a threshold)');
     }
   }
