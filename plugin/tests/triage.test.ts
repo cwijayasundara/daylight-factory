@@ -36,7 +36,7 @@ test('AC-99 triage returns size, tier, spec_needed and records the rationale as 
 });
 test('AC-100 default rules classify each sensitive path as high with no tier config', () => {
   const d = tmp(); const f = prd(d);
-  for (const p of ['src/auth/login.ts', 'src/authz/policy.ts', 'config/secrets.yaml', 'db/migrations/001.sql', 'src/billing/charge.ts', '.github/workflows/ci.yml', 'Dockerfile', 'deploy/prod.yml']) {
+  for (const p of ['packages/api/src/auth/deep/login.ts', 'src/auth/login.ts', 'src/authz/policy.ts', 'config/secrets.yaml', 'db/migrations/001.sql', 'src/billing/charge.ts', '.github/workflows/ci.yml', 'Dockerfile', 'deploy/prod.yml']) {
     assert.equal(J(cli(['triage', f, '--paths', p], { cwd: d })).tier, 'high', p);
   }
 });

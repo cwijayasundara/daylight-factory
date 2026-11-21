@@ -93,6 +93,23 @@ if (cmd === 'config') {
   else if (sub === 'decide') err = g.decide(cwd, name, { decision: opt('decision')!, source: opt('source') ?? 'human', feedback: opt('feedback'), dir, cap: cfg.retries.design });
   else if (sub === 'agent') err = g.agentDecide(cwd, name, dir, cfg);
   if (err) fail(err);
+} else if (cmd === 'plan' && rest[0] === 'check') {
+  const { checkPlan, loadPlan } = await import('./plan.ts');
+  const { readFileSync } = await import('node:fs');
+  const e = checkPlan(readFileSync(opt('spec')!, 'utf8'), loadPlan(opt('plan')!)); if (e.length) fail(e.join('\n')); console.log('ok');
+} else if (cmd === 'worktree' && rest[0] === 'add') {
+  const { addWorktree } = await import('./worktree.ts'); console.log(JSON.stringify(addWorktree(process.cwd(), rest[1])));
+} else if (cmd === 'tdd' && rest[0] === 'check') {
+  const { tddCheck } = await import('./tdd.ts');
+  const e = tddCheck(process.cwd(), opt('base') ?? 'main', opt('branch')!, opt('task')); if (e.length) fail(e.join('\n')); console.log('ok');
+} else if (cmd === 'red') {
+  const { recordRed } = await import('./tdd.ts'); const e = recordRed(process.cwd(), opt('task')!, opt('cmd')!); if (e) fail(e); console.log('ok');
+} else if (cmd === 'verdict' && rest[0] === 'normalize') {
+  const { normalize } = await import('./verdict.ts'); const { readFileSync } = await import('node:fs');
+  try { console.log(JSON.stringify(normalize(JSON.parse(readFileSync(rest[1], 'utf8'))))); } catch (e) { fail((e as Error).message); }
+} else if (cmd === 'inner' && rest[0] === 'run') {
+  const { runInner } = await import('./loop.ts'); const { loadPlan } = await import('./plan.ts'); const { resolveConfig } = await import('./config.ts');
+  console.log(JSON.stringify(await runInner(process.cwd(), loadPlan(opt('plan')!), resolveConfig(process.cwd(), { config: opt('config') }))));
 } else if (cmd === 'selfcheck' && rest[0] === 'no-codemode-var') {
   const hits = noCodeModeVar(PLUGIN);
   if (hits.length) fail('Code Mode variable referenced in: ' + hits.join(', '));

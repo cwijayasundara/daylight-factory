@@ -89,5 +89,13 @@
       "id_(rsa|ed25519)",
       "\\.pem\\b"
     ]
+  },
+  "guard": {
+    "protected_paths": [
+      "daylight.yaml",
+      "**/rubrics/**",
+      "**/spec.md",
+      "**/sensors/**"
+    ]
   }
 }

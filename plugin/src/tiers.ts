@@ -9,7 +9,7 @@ export const DEFAULT_RULES: Rule[] = [{
   keywords: ['authentication', 'authorization', 'password', 'secret', 'credential', 'migration', 'payment', 'billing', 'ci workflow'],
 }];
 
-const re = (g: string) => new RegExp('^' + g.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*\//g, '(?:.*/)?').replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*') + '$');
+export const globRe = (g: string) => new RegExp('^' + g.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*\//g, '\x01').replace(/\*\*/g, '\x02').replace(/\*/g, '[^/]*').replace(/\x01/g, '(?:.*/)?').replace(/\x02/g, '.*') + '$');
 const order: Tier[] = ['low', 'medium', 'high'];
 
 /** Operator rules are evaluated first (they override); defaults follow when use_defaults. Per path: first matching rule wins; item tier = max over paths and title keywords. */
@@ -17,7 +17,7 @@ export function classify(paths: string[], title: string, cfg: { tiers: { use_def
   const rules = [...cfg.tiers.rules, ...(cfg.tiers.use_defaults ? DEFAULT_RULES : [])];
   const hits: { tier: Tier; why: string }[] = [];
   for (const p of paths) {
-    const r = rules.find((x) => x.paths?.some((g) => re(g).test(p)));
+    const r = rules.find((x) => x.paths?.some((g) => globRe(g).test(p)));
     if (r) hits.push({ tier: r.tier, why: 'path ' + p + ' matches a ' + r.tier + ' rule' });
   }
   for (const r of rules) for (const k of r.keywords ?? []) if (new RegExp('\\b' + k + '\\b', 'i').test(title)) hits.push({ tier: r.tier, why: 'title keyword "' + k + '"' });
