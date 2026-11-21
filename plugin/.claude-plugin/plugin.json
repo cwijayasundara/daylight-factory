@@ -1,0 +1,9 @@
+{
+  "name": "daylight",
+  "version": "0.1.0",
+  "description": "Lights-on software factory harness: PRD to reviewed, tested, deployed code with generator/evaluator loops, auditable gates and a code wiki.",
+  "author": {
+    "name": "Daylight maintainers"
+  },
+  "license": "MIT"
+}

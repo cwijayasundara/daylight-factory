@@ -1,0 +1,82 @@
+{
+  "design_dir": "docs/design",
+  "gates": {
+    "design": {
+      "approver": "human",
+      "rubric": "design-rubric",
+      "human_required": false
+    },
+    "pr": {
+      "approver": "agent",
+      "rubric": "pr-rubric",
+      "human_required": false,
+      "human_after_agent": true
+    }
+  },
+  "models": {
+    "generator": "claude-sonnet-5-5",
+    "evaluator": "claude-opus-5-5",
+    "evaluator_fallback": "claude-sonnet-5-5",
+    "judge": "claude-opus-5-5",
+    "design": "claude-opus-5-5",
+    "triage": "claude-sonnet-5-5",
+    "wiki": "claude-sonnet-5-5",
+    "reflection": "claude-sonnet-5-5",
+    "dream": "claude-opus-5-5",
+    "approver": "claude-opus-5-5"
+  },
+  "effort": {
+    "design": "high",
+    "generator_small": "low",
+    "generator_default": "medium",
+    "generator_risky": "high",
+    "evaluator": "medium",
+    "judge": "medium"
+  },
+  "retries": {
+    "task": 3,
+    "design": 3
+  },
+  "sensors": {
+    "coverage_min": 80,
+    "complexity_max": 10,
+    "duplication_max": 0.8,
+    "output_line_cap": 20,
+    "slow_timeout_s": 540,
+    "required": [
+      "tests",
+      "typecheck",
+      "lint",
+      "secrets"
+    ],
+    "commands": {}
+  },
+  "deploy": {
+    "compose_file": "docker-compose.yml",
+    "health_timeout_s": 120,
+    "smoke_command": "npm run smoke"
+  },
+  "wiki": {
+    "enabled": true,
+    "dir": "docs/wiki"
+  },
+  "dream": {
+    "schedule": "0 3 * * 0",
+    "allowlist": [
+      "skills/**",
+      "rubrics/**",
+      "CLAUDE.md",
+      "daylight.yaml"
+    ]
+  },
+  "ledger": {
+    "max_custom_lines": 4000
+  },
+  "context": {
+    "budget_tokens": 12000
+  },
+  "tiers": {
+    "use_defaults": true,
+    "rules": []
+  }
+}

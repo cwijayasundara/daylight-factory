@@ -1,0 +1,13 @@
+{
+  "name": "daylight-local",
+  "owner": {
+    "name": "Daylight maintainers"
+  },
+  "plugins": [
+    {
+      "name": "daylight",
+      "source": "./plugin",
+      "description": "Lights-on software factory harness"
+    }
+  ]
+}

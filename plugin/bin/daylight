@@ -1,0 +1,3 @@
+#!/bin/bash
+# Reuses: node (type stripping) - thin launcher.
+exec node "$(dirname "$0")/../src/cli.ts" "$@"

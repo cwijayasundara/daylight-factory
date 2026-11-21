@@ -1,0 +1,319 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "daylight.yaml",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "gates",
+    "deploy"
+  ],
+  "properties": {
+    "design_dir": {
+      "type": "string"
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "design": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "approver": {
+              "enum": [
+                "human",
+                "agent"
+              ]
+            },
+            "rubric": {
+              "type": "string"
+            },
+            "human_required": {
+              "type": "boolean"
+            }
+          }
+        },
+        "pr": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "approver": {
+              "enum": [
+                "human",
+                "agent"
+              ]
+            },
+            "rubric": {
+              "type": "string"
+            },
+            "human_required": {
+              "type": "boolean"
+            },
+            "human_after_agent": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "models": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "generator": {
+          "type": "string"
+        },
+        "evaluator": {
+          "type": "string"
+        },
+        "evaluator_fallback": {
+          "type": "string"
+        },
+        "judge": {
+          "type": "string"
+        },
+        "design": {
+          "type": "string"
+        },
+        "triage": {
+          "type": "string"
+        },
+        "wiki": {
+          "type": "string"
+        },
+        "reflection": {
+          "type": "string"
+        },
+        "dream": {
+          "type": "string"
+        },
+        "approver": {
+          "type": "string"
+        }
+      }
+    },
+    "effort": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "design": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ]
+        },
+        "generator_small": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ]
+        },
+        "generator_default": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ]
+        },
+        "generator_risky": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ]
+        },
+        "evaluator": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ]
+        },
+        "judge": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ]
+        }
+      }
+    },
+    "retries": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "task": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "design": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        }
+      }
+    },
+    "sensors": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "coverage_min": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "complexity_max": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "duplication_max": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "output_line_cap": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "slow_timeout_s": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 540
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "commands": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "deploy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target"
+      ],
+      "properties": {
+        "target": {
+          "enum": [
+            "local",
+            "test"
+          ]
+        },
+        "compose_file": {
+          "type": "string"
+        },
+        "health_timeout_s": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "smoke_command": {
+          "type": "string"
+        }
+      }
+    },
+    "wiki": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "dir": {
+          "type": "string"
+        }
+      }
+    },
+    "dream": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schedule": {
+          "type": "string"
+        },
+        "allowlist": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ledger": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_custom_lines": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "budget_tokens": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "tiers": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "use_defaults": {
+          "type": "boolean"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "tier"
+            ],
+            "properties": {
+              "tier": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "paths": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "keywords": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
