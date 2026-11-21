@@ -142,8 +142,8 @@ if (cmd === 'config') {
   const { append, auditFile } = await import('./lib/events.ts'); append(auditFile(process.cwd()), { kind: 'x_recovery', phase: 'judge', task: opt('task'), recovered: opt('passed') === 'true' });
 } else if (cmd === 'pr') {
   const PR = await import('./pr.ts'); const { resolveConfig } = await import('./config.ts');
-  const r: any = rest[0] === 'create' ? PR.createPr(process.cwd(), { branch: opt('branch')!, base: opt('base') ?? 'main', title: opt('title') ?? 'Daylight change', push: !flag('no-push') })
-    : PR.mergePr(process.cwd(), resolveConfig(process.cwd(), { base: opt('base-config') }), { branch: opt('branch')!, tier: (opt('tier') ?? 'medium') as any });
+  const r: any = await (rest[0] === 'create' ? PR.createPr(process.cwd(), { branch: opt('branch')!, base: opt('base') ?? 'main', title: opt('title') ?? 'Daylight change', push: !flag('no-push') })
+    : PR.mergePr(process.cwd(), resolveConfig(process.cwd(), { base: opt('base-config') }), { branch: opt('branch')!, tier: (opt('tier') ?? 'medium') as any }));
   if (r.error) fail(r.error); console.log(JSON.stringify(r));
 } else if (cmd === 'touchpoints') {
   const { touchpoints } = await import('./metrics.ts'); const { auditFile } = await import('./lib/events.ts');
@@ -152,6 +152,16 @@ if (cmd === 'config') {
   const { render } = await import('./report.ts'); const { auditFile } = await import('./lib/events.ts'); const { writeFileSync } = await import('node:fs');
   const out = opt('out') ?? join(process.cwd(), '.daylight/report-' + rest[0] + '.html');
   writeFileSync(out, render(auditFile(process.cwd(), rest[0]), rest[0], opt('repo'))); console.log(out);
+} else if (cmd === 'wiki') {
+  const W = await import('./wiki.ts'); const { resolveConfig } = await import('./config.ts');
+  const cwd = process.cwd(), cfg = resolveConfig(cwd);
+  if (rest[0] === 'links') { const e = W.links(cwd, cfg); if (e.length) fail(e.join('\n')); console.log('ok'); }
+  else if (rest[0] === 'current') { if (!W.current(cwd, cfg, opt('sha')!)) fail('wiki is not current for ' + opt('sha')); console.log('ok'); }
+  else console.log(await W.update(cwd, cfg, { sha: opt('sha'), summarize: flag('summarize') }));
+} else if (cmd === 'ingest') {
+  const { ingest } = await import('./ingest.ts'); const { resolveConfig } = await import('./config.ts');
+  const r = await ingest(process.cwd(), resolveConfig(process.cwd()), { auto: flag('auto'), accept: flag('accept') });
+  if (r.code) fail(r.out); console.log(r.out);
 } else if (cmd === 'selfcheck' && rest[0] === 'no-codemode-var') {
   const hits = noCodeModeVar(PLUGIN);
   if (hits.length) fail('Code Mode variable referenced in: ' + hits.join(', '));
