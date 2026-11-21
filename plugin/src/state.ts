@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-export interface GateState { status: 'pending' | 'approved' | 'rejected' | 'escalated'; revision: number; rejections: number; hashes?: Record<string, string>; feedback?: string; source?: string; scores?: Record<string, number>; head?: string }
+export interface GateState { status: 'pending' | 'approved' | 'rejected' | 'escalated'; revision: number; rejections: number; hashes?: Record<string, string>; feedback?: string; source?: string; scores?: Record<string, number>; head?: string; decisions?: { source: string; decision: string; head?: string; degraded?: boolean }[] }
 export interface State { gates: Record<string, GateState>; [k: string]: unknown }
 const f = (cwd: string) => join(cwd, '.daylight', 'state.json');
 export const load = (cwd: string): State => (existsSync(f(cwd)) ? JSON.parse(readFileSync(f(cwd), 'utf8')) : { gates: {} });

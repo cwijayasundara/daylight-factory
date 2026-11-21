@@ -86,11 +86,13 @@ if (cmd === 'config') {
   const dir = opt('dir') ?? join(cwd, cfg.design_dir);
   const [sub, name = 'design'] = cmd === 'gate' ? rest : ['verify'];
   let err: string | null = null;
-  if (cmd === 'inner-start' || sub === 'verify') err = g.verifyGate(cwd, 'design', dir);
+  if (sub === 'verify' && name === 'pr') err = g.verifyPr(cwd, opt('head')!);
+  else if (sub === 'satisfied') { const r = g.prSatisfied(cwd, cfg, opt('tier') as any, opt('head')!); console.log(JSON.stringify(r)); if (!r.ok) process.exit(1); }
+  else if (cmd === 'inner-start' || sub === 'verify') err = g.verifyGate(cwd, 'design', dir);
   else if (sub === 'request') g.request(cwd, name);
   else if (sub === 'present') console.log(g.present(dir));
   else if (sub === 'context') console.log(g.context(cwd, name));
-  else if (sub === 'decide') err = g.decide(cwd, name, { decision: opt('decision')!, source: opt('source') ?? 'human', feedback: opt('feedback'), dir, cap: cfg.retries.design });
+  else if (sub === 'decide') err = g.decide(cwd, name, { decision: opt('decision')!, source: opt('source') ?? 'human', feedback: opt('feedback'), dir, cap: cfg.retries.design, head: opt('head'), degraded: flag('degraded') });
   else if (sub === 'agent') err = g.agentDecide(cwd, name, dir, cfg);
   if (err) fail(err);
 } else if (cmd === 'plan' && rest[0] === 'check') {
@@ -138,6 +140,14 @@ if (cmd === 'config') {
   const J = await import('./judge.ts'); const e = J.scopeCheck(process.cwd(), opt('plan')!, opt('base') ?? 'main'); if (e.length) fail(e.join('\n')); console.log('ok');
 } else if (cmd === 'recovery' && rest[0] === 'record') {
   const { append, auditFile } = await import('./lib/events.ts'); append(auditFile(process.cwd()), { kind: 'x_recovery', phase: 'judge', task: opt('task'), recovered: opt('passed') === 'true' });
+} else if (cmd === 'pr') {
+  const PR = await import('./pr.ts'); const { resolveConfig } = await import('./config.ts');
+  const r: any = rest[0] === 'create' ? PR.createPr(process.cwd(), { branch: opt('branch')!, base: opt('base') ?? 'main', title: opt('title') ?? 'Daylight change', push: !flag('no-push') })
+    : PR.mergePr(process.cwd(), resolveConfig(process.cwd(), { base: opt('base-config') }), { branch: opt('branch')!, tier: (opt('tier') ?? 'medium') as any });
+  if (r.error) fail(r.error); console.log(JSON.stringify(r));
+} else if (cmd === 'touchpoints') {
+  const { touchpoints } = await import('./metrics.ts'); const { auditFile } = await import('./lib/events.ts');
+  console.log(JSON.stringify(touchpoints(auditFile(process.cwd()))));
 } else if (cmd === 'selfcheck' && rest[0] === 'no-codemode-var') {
   const hits = noCodeModeVar(PLUGIN);
   if (hits.length) fail('Code Mode variable referenced in: ' + hits.join(', '));

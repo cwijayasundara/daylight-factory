@@ -28,7 +28,7 @@ export function classify(paths: string[], title: string, cfg: { tiers: { use_def
 export function gatePolicy(tier: Tier, cfg: any, degraded = false) {
   const pr = cfg.gates.pr;
   if (tier === 'high' || degraded) return { tier, agent_only: false, human_required: true, reason: degraded ? 'degraded evaluator verdict cannot be the only approval' : 'high tier requires a human decision' };
-  if (tier === 'low') return { tier, agent_only: true, human_required: false, reason: 'low tier allows an agent-only gate' };
-  const h = !!(pr.human_required || pr.human_after_agent);
+  if (tier === 'low' && !pr.human_required) return { tier, agent_only: true, human_required: false, reason: 'low tier allows an agent-only gate' };
+  const h = !!(pr.human_required || (tier !== 'low' && pr.human_after_agent));
   return { tier, agent_only: !h, human_required: h, reason: 'medium tier follows the configured policy' };
 }

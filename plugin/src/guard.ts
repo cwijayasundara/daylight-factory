@@ -31,6 +31,8 @@ export function protectedHit(p: any, cwd: string): string | null {
   if (p.tool_name === 'Bash' && /(>|\btee\b|sed -i|\bmv\b|\bcp\b|\brm\b)[^|;&]*(daylight\.yaml|spec\.md|rubrics\/)/.test(String(i.command))) return String(i.command).slice(0, 120);
   return null;
 }
+/** AC-66: never push to the default branch (best effort on command text). */
+export const pushesDefault = (p: any) => ['Bash', 'REPL'].includes(p.tool_name) && /git\s+push\b[^;&|\n]*(\b(main|master)\b|HEAD:(main|master))/.test(scanText(p));
 export const PROD_ENV = /^(AWS_|AZURE_|GCP_|GOOGLE_APPLICATION_CREDENTIALS|PROD_|DATABASE_URL|STRIPE_)/;
 export const cleanEnv = (env: Record<string, string | undefined>) => Object.fromEntries(Object.entries(env).filter(([k]) => !PROD_ENV.test(k)));
 
@@ -38,6 +40,11 @@ if (process.argv[1]?.endsWith('guard.ts')) {
   try {
     const p = JSON.parse(readFileSync(0, 'utf8'));
     const cwd = p.cwd ?? process.cwd();
+    if (pushesDefault(p)) {
+      append(auditFile(cwd), { kind: 'x_denial', phase: 'guard', tool: p.tool_name, reason: 'push_default_branch', summary: scanText(p).slice(0, 200) });
+      console.error('Daylight guard: pushing to the default branch is never allowed; open a PR instead.');
+      process.exit(2);
+    }
     const prot = protectedHit(p, cwd);
     if (prot) {
       append(auditFile(cwd), { kind: 'x_denial', phase: 'guard', tool: p.tool_name, reason: 'protected_path', summary: prot });
