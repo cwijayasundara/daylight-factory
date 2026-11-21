@@ -106,10 +106,38 @@ if (cmd === 'config') {
   const { recordRed } = await import('./tdd.ts'); const e = recordRed(process.cwd(), opt('task')!, opt('cmd')!); if (e) fail(e); console.log('ok');
 } else if (cmd === 'verdict' && rest[0] === 'normalize') {
   const { normalize } = await import('./verdict.ts'); const { readFileSync } = await import('node:fs');
-  try { console.log(JSON.stringify(normalize(JSON.parse(readFileSync(rest[1], 'utf8'))))); } catch (e) { fail((e as Error).message); }
+  try { const { withMatrix } = await import('./verdict.ts'); const v = normalize(JSON.parse(readFileSync(rest[1], 'utf8'))); console.log(JSON.stringify(opt('matrix') ? withMatrix(v, JSON.parse(readFileSync(opt('matrix')!, 'utf8'))) : v)); } catch (e) { fail((e as Error).message); }
 } else if (cmd === 'inner' && rest[0] === 'run') {
   const { runInner } = await import('./loop.ts'); const { loadPlan } = await import('./plan.ts'); const { resolveConfig } = await import('./config.ts');
-  console.log(JSON.stringify(await runInner(process.cwd(), loadPlan(opt('plan')!), resolveConfig(process.cwd(), { config: opt('config') }))));
+  const cfg = resolveConfig(process.cwd(), { config: opt('config'), base: opt('base') });
+  const { runFast } = await import('./sensors.ts');
+  console.log(JSON.stringify(await runInner(process.cwd(), loadPlan(opt('plan')!), cfg, { sensors: async (wt) => { const r = runFast(wt, cfg); return { ok: r.ok, messages: r.results.flatMap((x) => x.messages).join('\n') }; } })));
+} else if (cmd === 'sensors') {
+  const S = await import('./sensors.ts'); const { resolveConfig } = await import('./config.ts');
+  const cwd = process.cwd(), cfg = resolveConfig(cwd, { config: opt('config'), base: opt('base') });
+  if (rest[0] === 'wait') process.exit(await S.waitSlow(cwd, opt('name')!, Number(opt('max') ?? 540)));
+  else if (rest[0] === '_exec') S.execSlow(cwd, opt('name')!, cfg);
+  else if (flag('slow')) { S.startSlow(cwd, opt('name')!); console.log('started ' + opt('name') + ' in the background'); }
+  else { const r = S.runFast(cwd, cfg); if (!r.ok) fail(S.format(r.results, cfg.sensors.output_line_cap)); console.log('ok'); }
+} else if (cmd === 'trace') {
+  const T = await import('./trace.ts'); const { resolveConfig } = await import('./config.ts'); const { readFileSync, writeFileSync, mkdirSync } = await import('node:fs');
+  const cfg = resolveConfig(process.cwd(), { config: opt('config') });
+  const cmdline = opt('cmd') ?? (cfg.sensors.commands.tests ?? 'node --test') + (/test-reporter/.test(cfg.sensors.commands.tests ?? '') ? '' : ' --test-reporter=tap');
+  const rows = T.matrix(readFileSync(opt('spec')!, 'utf8'), T.runTests(process.cwd(), cmdline));
+  mkdirSync(join(process.cwd(), '.daylight'), { recursive: true }); writeFileSync(join(process.cwd(), '.daylight/trace.json'), JSON.stringify({ rows }, null, 2));
+  console.log(T.render(rows)); if (rows.some((r) => r.result !== 'PASS')) process.exit(1);
+} else if (cmd === 'review') {
+  const R = await import('./review.ts'); const { readFileSync } = await import('node:fs');
+  if (rest[0] === 'capture') { const r = R.capture(process.cwd(), opt('kind') as any, opt('level')); console.log(r.file); }
+  else console.log(JSON.stringify(R.classify(JSON.parse(readFileSync(rest[1], 'utf8')))));
+} else if (cmd === 'judge') {
+  const J = await import('./judge.ts'); const { resolveConfig } = await import('./config.ts');
+  const v = await J.judge(process.cwd(), resolveConfig(process.cwd(), { base: opt('base-config') }), { spec: opt('spec')!, task: opt('task'), base: opt('base') });
+  console.log(JSON.stringify(v)); if (v.effective === 'fail') process.exit(1);
+} else if (cmd === 'scope' && rest[0] === 'check') {
+  const J = await import('./judge.ts'); const e = J.scopeCheck(process.cwd(), opt('plan')!, opt('base') ?? 'main'); if (e.length) fail(e.join('\n')); console.log('ok');
+} else if (cmd === 'recovery' && rest[0] === 'record') {
+  const { append, auditFile } = await import('./lib/events.ts'); append(auditFile(process.cwd()), { kind: 'x_recovery', phase: 'judge', task: opt('task'), recovered: opt('passed') === 'true' });
 } else if (cmd === 'selfcheck' && rest[0] === 'no-codemode-var') {
   const hits = noCodeModeVar(PLUGIN);
   if (hits.length) fail('Code Mode variable referenced in: ' + hits.join(', '));

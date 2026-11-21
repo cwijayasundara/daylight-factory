@@ -9,7 +9,7 @@ const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 export const runId = () => process.env.DAYLIGHT_RUN || 'adhoc-' + new Date().toISOString().slice(0, 10);
 export const auditFile = (cwd: string, run = runId()) => join(cwd, '.daylight', 'audit', run + '.jsonl');
 
-const SECRETS = [/AKIA[0-9A-Z]{16}/g, /gh[pousr]_[A-Za-z0-9]{30,}/g, /sk-[A-Za-z0-9_-]{20,}/g, /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g, /xox[baprs]-[A-Za-z0-9-]{10,}/g, /((?:password|passwd|secret|api[_-]?key)\s*[=:]\s*)[^\s"',;]{6,}/gi];
+export const SECRETS = [/AKIA[0-9A-Z]{16}/g, /gh[pousr]_[A-Za-z0-9]{30,}/g, /sk-[A-Za-z0-9_-]{20,}/g, /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g, /xox[baprs]-[A-Za-z0-9-]{10,}/g, /((?:password|passwd|secret|api[_-]?key)\s*[=:]\s*)[^\s"',;]{6,}/gi];
 export const redact = (s: string) => SECRETS.reduce((t, re, i) => t.replace(re, i === SECRETS.length - 1 ? '$1[REDACTED]' : '[REDACTED]'), s);
 
 export function readLines(file: string): string[] {

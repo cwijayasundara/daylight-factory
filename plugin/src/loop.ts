@@ -19,7 +19,7 @@ export const claude = (args: string[], cwd: string, env: Record<string, string> 
   c.stdout.on('data', (d) => (stdout += d)); c.stderr.on('data', (d) => (stderr += d));
   c.on('close', (code) => res({ code: code ?? -1, stdout, stderr }));
 });
-const parseResult = (stdout: string) => { try { const j = JSON.parse(stdout); return { text: String(j.result ?? ''), usage: j.usage ?? null, cost: j.total_cost_usd ?? null }; } catch { return { text: stdout, usage: null, cost: null }; } };
+export const parseResult = (stdout: string) => { try { const j = JSON.parse(stdout); return { text: String(j.result ?? ''), usage: j.usage ?? null, cost: j.total_cost_usd ?? null }; } catch { return { text: stdout, usage: null, cost: null }; } };
 export const effortFor = (t: Task, attempt: number, cfg: any) => (t.risky || attempt >= 3 ? cfg.effort.generator_risky : t.size === 'small' ? cfg.effort.generator_small : cfg.effort.generator_default);
 
 export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): Promise<'passed' | 'escalated'> {

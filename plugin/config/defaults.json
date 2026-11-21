@@ -44,12 +44,11 @@
     "output_line_cap": 20,
     "slow_timeout_s": 540,
     "required": [
-      "tests",
-      "typecheck",
-      "lint",
       "secrets"
     ],
-    "commands": {}
+    "commands": {},
+    "layers": [],
+    "advisories": []
   },
   "deploy": {
     "compose_file": "docker-compose.yml",

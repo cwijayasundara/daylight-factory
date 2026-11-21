@@ -200,6 +200,47 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "layers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "from",
+              "cannot_import"
+            ],
+            "properties": {
+              "from": {
+                "type": "string"
+              },
+              "cannot_import": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "advisories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "below"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "below": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     },
