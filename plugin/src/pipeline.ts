@@ -1,5 +1,5 @@
 // Reuses: every Daylight module (this is only the sequencing, G16), claude -p for authoring/approvals, git, docker via deploy.ts.
-import { spawnSync } from 'node:child_process';
+import { spawnSync, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -40,6 +40,7 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
   const stopIf = (n: string): Result | null => (o.stopAfter === n ? { ok: true, stage: n, msg: 'stopped after ' + n } : null);
   save();
   const cmd = (args: string[]) => spawnSync('node', [CLI, ...args], { cwd, encoding: 'utf8' });
+  const cmdAsync = (args: string[]) => new Promise<{ status: number; stdout: string; stderr: string }>((res) => { const c = spawn('node', [CLI, ...args], { cwd }); let stdout = '', stderr = ''; c.stdout.on('data', (d) => (stdout += d)); c.stderr.on('data', (d) => (stderr += d)); c.on('close', (code) => res({ status: code ?? 1, stdout, stderr })); });
   const ph = async <T>(name: string, fn: () => Promise<T> | T): Promise<T> => { append(f, { kind: 'phase', name, phase: name, status: 'start' }); const r = await fn(); append(f, { kind: 'phase', name, phase: name, status: 'end' }); return r; };
   const stop = (stage: string, msg: string): Result => { append(f, { kind: 'x_stop_run', phase: stage, msg }); return { ok: false, stage, msg }; };
   const ask = async (phase: string, model: string, effort: string, prompt: string, tools = authorTools) => {
@@ -98,14 +99,14 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
       await ask('plan', cfg.models.triage, cfg.effort.generator_default,
         'Read ' + join(dir, 'spec.md') + ' and (if present) .daylight/ingest/conventions.md. Write .daylight/plan.json: {"tasks":[{"id":"t1","title":"..","acs":["AC-1"],"paths":["src/","tests/"],"deps":[],"size":"small|medium|large","risky":false}]}. Rules: every AC in spec.md appears in some task; paths are repo-relative prefixes covering EVERY non-test file the task creates or edits (source, Dockerfile, compose, scripts, package.json); tests belonging to the task are always allowed; a task that wires into or edits a file another task creates must list that file in its paths and depend on that task; make tasks independent where possible, add deps only when a task needs another task\'s code; 3-5 tasks. Do NOT create a task that only adds tests for behaviour another task implements (its tests could never be red): every task implements behaviour AND its own failing-first tests; fold performance/logging/docs checks into the task that implements them. Only a task that has no new behaviour may set "tdd":false (this is logged as a waiver). Then run node ' + CLI + ' plan check --spec ' + join(dir, 'spec.md') + ' --plan .daylight/plan.json' + (err ? '\nFix: ' + err : ''), 'Read,Write,Edit,Glob,Grep,Bash');
       const c = cmd(['plan', 'check', '--spec', join(dir, 'spec.md'), '--plan', join(cwd, '.daylight/plan.json')]);
-      if (c.status === 0) return; err = c.stderr;
+      if (c.status === 0) { const l = cmd(['plan', 'lint', '--spec', join(dir, 'spec.md'), '--plan', join(cwd, '.daylight/plan.json')]); if (l.status === 0) return; append(f, { kind: 'x_plan_lint', phase: 'plan', errors: l.stderr.slice(0, 400) }); err = l.stderr; } else err = c.stderr;
     }
   });
   if (!existsSync(join(cwd, '.daylight/plan.json'))) return stop('plan', 'no plan produced');
   mark('plan'); { const s = stopIf('plan'); if (s) return s; }
   const tasks = loadPlan(join(cwd, '.daylight/plan.json'));
 
-  const status = rs.phases.inner ? Object.fromEntries(tasks.map((t) => [t.id, 'passed'])) : await ph('inner', () => runInner(cwd, tasks, cfg, { integrate: true, done: Object.keys(rs.tasks).filter((id) => rs.tasks[id] === 'passed'), onTask: (id: string, s: string) => { rs.tasks[id] = s; save(); }, sensors: async (wt) => { const r = runFast(wt, cfg); return { ok: r.ok, messages: r.results.flatMap((x) => x.messages).join('\n') }; } }));
+  const status = rs.phases.inner ? Object.fromEntries(tasks.map((t) => [t.id, 'passed'])) : await ph('inner', () => runInner(cwd, tasks, cfg, { spec: join(dir, 'spec.md'), integrate: true, done: Object.keys(rs.tasks).filter((id) => rs.tasks[id] === 'passed'), onTask: (id: string, s: string) => { rs.tasks[id] = s; save(); }, sensors: async (wt) => { const r = runFast(wt, cfg); return { ok: r.ok, messages: r.results.flatMap((x) => x.messages).join('\n') }; } }));
   if (Object.values(status).some((s) => s !== 'passed')) return stop('inner', 'tasks not passed: ' + JSON.stringify(status));
   mark('inner'); { const s = stopIf('inner'); if (s) return s; }
 
@@ -117,9 +118,12 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
     if (!gate.ok) return noteFail({ ok: false, stage: 'sensors', msg: gate.msg });
     const tr = await ph('trace', () => cmd(['trace', '--spec', join(dir, 'spec.md')])); if (tr.status !== 0) return noteFail({ ok: false, stage: 'trace', msg: tr.stdout });
     const sc = cmd(['scope', 'check', '--plan', planFile, '--base', o.base]); if (sc.status !== 0) return { ok: false, stage: 'scope', msg: sc.stderr };
-    const j = await ph('judge', async () => spawnSync('node', [CLI, 'judge', '--spec', join(dir, 'spec.md'), '--task', 'run', '--base', o.base], { cwd, encoding: 'utf8' }));
+    // the judge and both reviews read the same finished branch and do not depend on each other: run them concurrently
+    const [j] = await Promise.all([
+      ph('judge', () => cmdAsync(['judge', '--spec', join(dir, 'spec.md'), '--task', 'run', '--base', o.base])),
+      ph('review', () => Promise.all(['code-review', 'security-review'].map((k) => cmdAsync(['review', 'capture', '--kind', k, '--target', branch])))),
+    ]);
     if (j.status !== 0) return noteFail({ ok: false, stage: 'judge', msg: j.stdout });
-    await ph('review', async () => { for (const k of ['code-review', 'security-review']) cmd(['review', 'capture', '--kind', k, '--target', branch]); });
     return null;
   };
   const reviewText = () => ['code-review', 'security-review'].map((k) => { const f = join(cwd, '.daylight/reviews', k + '.txt'); return existsSync(f) ? '## ' + k + '\n' + readFileSync(f, 'utf8').slice(0, 6000) : ''; }).join('\n');
@@ -127,7 +131,7 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
     // ADR-019: a fix task is a normal task (generator + evaluator + sensors) fed the cited findings; broad paths, TDD waiver logged.
     const t = { id: 'fix' + round, title: 'Address review findings (round ' + round + ')', acs: [] as string[], paths: ['src/', 'tests/', 'scripts/', 'docs/', 'package.json', 'README.md', 'Dockerfile', 'docker-compose.yml', '.dockerignore'], deps: [] as string[], size: 'medium' as const, tdd: false, feedback };
     writeFileSync(planFile, JSON.stringify({ tasks: [...loadPlan(planFile), t] }, null, 2));
-    const s = await ph('fix', () => runInner(cwd, [t], cfg, { integrate: true, sensors: async (wt) => { const r = runFast(wt, cfg); return { ok: r.ok, messages: r.results.flatMap((x) => x.messages).join('\n') }; } }));
+    const s = await ph('fix', () => runInner(cwd, [t], cfg, { spec: join(dir, 'spec.md'), integrate: true, sensors: async (wt) => { const r = runFast(wt, cfg); return { ok: r.ok, messages: r.results.flatMap((x) => x.messages).join('\n') }; } }));
     return s[t.id] === 'passed';
   };
   const gate2Evidence = (): Evidence => {

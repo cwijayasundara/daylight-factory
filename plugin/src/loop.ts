@@ -1,11 +1,12 @@
 // Reuses: claude -p subagents (--agent daylight:generator|evaluator), git worktrees, Superpowers SDD loop shape. Glue: retry cap, fresh context, escalation, parallel scheduling.
 import { spawn } from 'node:child_process';
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { git, addWorktree } from './worktree.ts';
 import { normalize } from './verdict.ts';
 import { extractJson } from './lib/json.ts';
+import { generatorContext } from './context.ts';
 import { scopeViolations, repeatsPrevious, failureClass } from './contract.ts';
 import { tddCheck, waiverFor } from './tdd.ts';
 import { append, auditFile } from './lib/events.ts';
@@ -13,7 +14,7 @@ import type { Task } from './plan.ts';
 
 const PLUGIN = join(dirname(fileURLToPath(import.meta.url)), '..');
 export interface Sensor { ok: boolean; messages: string }
-export interface Opts { done?: string[]; onTask?: (id: string, status: string) => void; integrate?: boolean; sensors?: (wt: string, t: Task) => Promise<Sensor>; evaluatorExtra?: (wt: string, t: Task) => Promise<string> }
+export interface Opts { done?: string[]; onTask?: (id: string, status: string) => void; integrate?: boolean; sensors?: (wt: string, t: Task) => Promise<Sensor>; evaluatorExtra?: (wt: string, t: Task) => Promise<string>; spec?: string }
 
 export const claude = (args: string[], cwd: string, env: Record<string, string> = {}) => new Promise<{ code: number; stdout: string; stderr: string }>((res) => {
   const e = { ...process.env, ...env };
@@ -32,10 +33,12 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
   append(file, { kind: 'x_task_start', phase: 'inner', task: t.id });
   if (t.tdd === false) append(file, { kind: 'x_tdd_waiver', phase: 'inner', task: t.id, reason: 'planner marked the task as having no new behaviour' });
   let feedback = '', diff = '', prevComp: string[] | undefined;
+  const rd = (p: string) => (existsSync(p) ? readFileSync(p, 'utf8') : '');
+  const ctx = generatorContext(t, { spec: opts.spec ? rd(opts.spec) : '', sensors: cfg.sensors ?? {}, conventions: rd(join(cwd, '.daylight/ingest/conventions.md')) });
   const attempts = 1 + cfg.retries.task;
   for (let n = 1; n <= attempts; n++) {
     const effort = effortFor(t, n, cfg);
-    const prompt = 'Task ' + t.id + ': ' + t.title + '\nAcceptance criteria: ' + t.acs.join(', ') + '\nAllowed paths: ' + t.paths.join(', ') +
+    const prompt = 'Task ' + t.id + ': ' + t.title + '\nAcceptance criteria: ' + t.acs.join(', ') + '\nAllowed paths: ' + t.paths.join(', ') + '\n\n' + ctx + '\n' +
       '\nFollow TDD with separate commits: (1) write failing tests whose names contain their AC id, run: node ' + join(PLUGIN, 'src/cli.ts') + ' red --task ' + t.id + ' --cmd "' + (cfg.sensors.commands.tests ?? 'npm test') + '" (it must exit 0 = recorded red; if your new tests already pass because the behaviour exists, run the same command with --waive "<reason>" instead: the waiver is logged and the evaluator will judge it), then git add -A && git commit -m "test: ..."; (2) implement until green; commit. Stay in the allowed paths.' + (t.feedback ? '\n\n## Review findings to fix\n' + t.feedback : '') + (n > 1 ? '\n\n## Diff so far\n' + diff + '\n\n## Cited feedback to fix\n' + feedback : '');
     append(file, { kind: 'x_context', phase: 'inner', task: t.id, attempt: n, role: 'generator', tokens: Math.ceil(prompt.length / 4), chars: prompt.length, budget: cfg.context.budget_tokens, over_budget: Math.ceil(prompt.length / 4) > cfg.context.budget_tokens });
     append(file, { kind: 'x_dispatch', phase: 'inner', task: t.id, attempt: n, role: 'generator', model: cfg.models.generator, effort });

@@ -98,6 +98,10 @@ if (cmd === 'config') {
   else if (sub === 'decide') err = g.decide(cwd, name, { decision: opt('decision')!, source: opt('source') ?? 'human', feedback: opt('feedback'), dir, cap: cfg.retries.design, head: opt('head'), degraded: flag('degraded') });
   else if (sub === 'agent') err = g.agentDecide(cwd, name, dir, cfg);
   if (err) fail(err);
+} else if (cmd === 'plan' && rest[0] === 'lint') {
+  const { loadPlan } = await import('./plan.ts'); const { lintPlan } = await import('./planlint.ts'); const { resolveConfig } = await import('./config.ts'); const { readFileSync } = await import('node:fs');
+  const cfg = resolveConfig(process.cwd(), { base: opt('base') });
+  const e = lintPlan(loadPlan(opt('plan')!), { protectedGlobs: cfg.guard.protected_paths, spec: readFileSync(opt('spec')!, 'utf8'), requiredSensors: cfg.sensors.required }); if (e.length) fail(e.join('\n')); console.log('ok');
 } else if (cmd === 'plan' && rest[0] === 'check') {
   const { checkPlan, loadPlan } = await import('./plan.ts');
   const { readFileSync } = await import('node:fs');
