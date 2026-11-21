@@ -1,0 +1,28 @@
+{
+  "branch": "dream/1795243317406",
+  "base": "factory/build",
+  "repo": "harness repo (local; no GitHub remote)",
+  "pr_body": "docs/demos/dream-pr.md",
+  "evidence": [
+    "e86",
+    "e88",
+    "e269",
+    "e270",
+    "e194",
+    "e196",
+    "e223",
+    "e225",
+    "e294",
+    "e296",
+    "e318",
+    "e320",
+    "e355",
+    "e356"
+  ],
+  "evidence_all_resolve": true,
+  "audit_copy": "audit/gf2.jsonl",
+  "source_runs": [
+    "gf2"
+  ],
+  "model": "claude-opus-5-5"
+}
