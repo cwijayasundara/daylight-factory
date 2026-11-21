@@ -14,6 +14,11 @@ test('AC-92 greenfield: one command took a PRD to design artefacts, a reviewed P
   assert.equal(g.pr.code_review, true); assert.equal(g.pr.security_review, true); assert.ok(g.pr.branch);
   assert.equal(g.deploy.ok, true); assert.equal(g.smoke.ok, true);
 });
+test('AC-92 a second unattended greenfield run (gh5, fresh clone) also reached deploy and smoke with 0 touchpoints', () => {
+  const g = demo('greenfield-gh5');
+  assert.equal(g.result.ok, true); assert.equal(g.deploy.ok, true); assert.equal(g.smoke.ok, true); assert.equal(g.touchpoints, 0);
+  assert.equal(g.pr.code_review, true); assert.equal(g.pr.security_review, true); assert.notEqual(g.run, demo('greenfield').run);
+});
 test('AC-93 brownfield: the same flow on the repo-fixture starts with ingest; no repository names in plugin sources', () => {
   const b = demo('brownfield');
   const order = b.phases.map((p: any) => p.phase); assert.ok(order.includes('ingest') && order.indexOf('ingest') < order.indexOf('design')); assert.equal(b.deploy.ok, true); assert.equal(b.smoke.ok, true); assert.equal(b.pr.code_review, true);

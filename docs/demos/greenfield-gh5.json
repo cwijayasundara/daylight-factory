@@ -1,0 +1,148 @@
+{
+  "phases": [
+    {
+      "phase": "triage",
+      "seconds": 0.001,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "ingest",
+      "seconds": 0,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "preflight",
+      "seconds": 1.065,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "design",
+      "seconds": 94.955,
+      "tokens": {
+        "claude-opus-5-5": {
+          "in": 57661,
+          "out": 7791
+        }
+      },
+      "cost_usd": 0.7045652
+    },
+    {
+      "phase": "plan",
+      "seconds": 17.221,
+      "tokens": {
+        "claude-sonnet-5-5": {
+          "in": 23480,
+          "out": 1611
+        }
+      },
+      "cost_usd": 0.1184032
+    },
+    {
+      "phase": "inner",
+      "seconds": 651.068,
+      "tokens": {
+        "claude-sonnet-5-5": {
+          "in": 48563,
+          "out": 10011
+        },
+        "claude-opus-5-5": {
+          "in": 57952,
+          "out": 11293
+        }
+      },
+      "cost_usd": 1.1756807
+    },
+    {
+      "phase": "sensors",
+      "seconds": 1.078,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "trace",
+      "seconds": 1.287,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "fix",
+      "seconds": 41.095,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "judge",
+      "seconds": 26.711,
+      "tokens": {
+        "claude-opus-5-5": {
+          "in": 13206,
+          "out": 1806
+        }
+      },
+      "cost_usd": 0.1482792
+    },
+    {
+      "phase": "review",
+      "seconds": 53.094,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "pr",
+      "seconds": 3.507,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "merge",
+      "seconds": 3.835,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "deploy",
+      "seconds": 2.139,
+      "tokens": {},
+      "cost_usd": 0
+    },
+    {
+      "phase": "reflect",
+      "seconds": 0.091,
+      "tokens": {},
+      "cost_usd": 0
+    }
+  ],
+  "touchpoints": 0,
+  "gates": {
+    "design": "agent",
+    "pr": "agent"
+  },
+  "deploy": {
+    "ok": true
+  },
+  "smoke": {
+    "ok": true
+  },
+  "pr": {
+    "url": "https://github.com/cwijayasundara/daylight-greenfield-sample/pull/4",
+    "branch": "daylight/run-gh5",
+    "code_review": true,
+    "security_review": true
+  },
+  "run": "gh5",
+  "command": "daylight run prd.md --agents",
+  "prd": "prd.md",
+  "design": [
+    "architecture.md",
+    "intent.md",
+    "spec.md"
+  ],
+  "result": {
+    "ok": true,
+    "stage": "done",
+    "msg": "deployed; deployed and smoke tests passed"
+  }
+}
