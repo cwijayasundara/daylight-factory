@@ -1,0 +1,14 @@
+{
+  "usage_keys": [
+    "input_tokens",
+    "output_tokens",
+    "cache_read_input_tokens",
+    "cache_creation_input_tokens"
+  ],
+  "modelUsage_keys": [
+    "inputTokens",
+    "outputTokens",
+    "costUSD"
+  ],
+  "total_cost_usd": "present"
+}

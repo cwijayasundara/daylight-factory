@@ -1,0 +1,5 @@
+node_modules
+.daylight/
+.daylight-spike/
+.claude/settings.local.json
+unnamed.jpg
