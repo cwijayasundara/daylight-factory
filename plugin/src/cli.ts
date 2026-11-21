@@ -67,6 +67,32 @@ if (cmd === 'config') {
 } else if (cmd === 'env-clean') {
   const { cleanEnv } = await import('./guard.ts');
   console.log(JSON.stringify(cleanEnv(process.env)));
+} else if (cmd === 'prd' && rest[0] === 'check') {
+  const { prdCheck } = await import('./design.ts');
+  const { readFileSync } = await import('node:fs');
+  const e = prdCheck(readFileSync(rest[1], 'utf8')); if (e.length) fail(e.join('\n')); console.log('ok');
+} else if (cmd === 'design') {
+  const d = await import('./design.ts');
+  const { resolveConfig } = await import('./config.ts');
+  const { readFileSync } = await import('node:fs');
+  const dir = opt('dir') ?? join(process.cwd(), resolveConfig(process.cwd()).design_dir);
+  if (rest[0] === 'stamp') { d.stamp(dir, (await import('./state.ts')).load(process.cwd()).gates.design?.revision ?? 0); console.log('ok'); }
+  else { const e = d.lint(dir, opt('prd') ? readFileSync(opt('prd')!, 'utf8') : undefined); if (e.length) fail(e.join('\n')); console.log('ok'); }
+} else if (cmd === 'gate' || cmd === 'inner-start') {
+  const g = await import('./gate.ts');
+  const { resolveConfig } = await import('./config.ts');
+  const cfg = resolveConfig(process.cwd(), { config: opt('config') });
+  const cwd = process.cwd();
+  const dir = opt('dir') ?? join(cwd, cfg.design_dir);
+  const [sub, name = 'design'] = cmd === 'gate' ? rest : ['verify'];
+  let err: string | null = null;
+  if (cmd === 'inner-start' || sub === 'verify') err = g.verifyGate(cwd, 'design', dir);
+  else if (sub === 'request') g.request(cwd, name);
+  else if (sub === 'present') console.log(g.present(dir));
+  else if (sub === 'context') console.log(g.context(cwd, name));
+  else if (sub === 'decide') err = g.decide(cwd, name, { decision: opt('decision')!, source: opt('source') ?? 'human', feedback: opt('feedback'), dir, cap: cfg.retries.design });
+  else if (sub === 'agent') err = g.agentDecide(cwd, name, dir, cfg);
+  if (err) fail(err);
 } else if (cmd === 'selfcheck' && rest[0] === 'no-codemode-var') {
   const hits = noCodeModeVar(PLUGIN);
   if (hits.length) fail('Code Mode variable referenced in: ' + hits.join(', '));

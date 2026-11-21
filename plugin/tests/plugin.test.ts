@@ -28,6 +28,6 @@ test('AC-2 local install into an empty git repo lists /daylight:run', () => {
   const inst = x(['plugin', 'install', 'daylight@daylight-local', '--scope', 'project']);
   assert.equal(inst.status, 0, inst.stdout + inst.stderr);
   const det = x(['plugin', 'details', 'daylight']);
-  assert.match(det.stdout + det.stderr, /Skills \(\d+\)\s+run/); // plugin commands are listed under their name; invoked as /daylight:run
+  assert.match(det.stdout + det.stderr, /Skills \(\d+\)[^\n]*\brun\b/); // plugin commands are listed under their name; invoked as /daylight:run
   assert.match(readFileSync(join(PLUGIN, 'commands/run.md'), 'utf8'), /--help/);
 });
