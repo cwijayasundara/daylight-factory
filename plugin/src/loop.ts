@@ -118,17 +118,22 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
 export async function runInner(cwd: string, tasks: Task[], cfg: any, opts: Opts = {}) {
   const status: Record<string, string> = {};
   for (const id of opts.done ?? []) status[id] = 'passed'; // resume: tasks already passed and integrated
-  let pending = tasks.filter((t) => !status[t.id]);
-  while (pending.length) {
-    for (const t of pending) if (t.deps.some((d) => ['escalated', 'blocked'].includes(status[d]))) { status[t.id] = 'blocked'; }
-    pending = pending.filter((t) => !status[t.id]);
-    const ready = pending.filter((t) => t.deps.every((d) => status[d] === 'passed'));
-    if (!ready.length) break;
-    await Promise.all(ready.map(async (t) => { status[t.id] = await runTask(cwd, t, cfg, { ...opts, tasks }); }));
-    if (opts.failFast !== false && ready.some((t) => status[t.id] === 'escalated')) for (const t of pending) if (!status[t.id]) status[t.id] = 'blocked'; // one escalation already fails the run: do not spend on the rest
-    if (opts.integrate) for (const t of ready) if (status[t.id] === 'passed' && git(cwd, ['merge', '--no-edit', 'daylight/' + t.id]).status !== 0) { git(cwd, ['merge', '--abort']); status[t.id] = 'escalated'; }
-    for (const t of ready) opts.onTask?.(t.id, status[t.id]);
-    pending = pending.filter((t) => !status[t.id]);
+  const running = new Map<string, Promise<string>>();
+  let halted = false;
+  while (true) {
+    for (const t of tasks) if (!status[t.id] && !running.has(t.id) && (halted || t.deps.some((d) => ['escalated', 'blocked'].includes(status[d])))) status[t.id] = 'blocked';
+    for (const t of tasks) if (!status[t.id] && !running.has(t.id) && t.deps.every((d) => status[d] === 'passed')) {
+      running.set(t.id, runTask(cwd, t, cfg, { ...opts, tasks }).then((st) => {
+        status[t.id] = st;
+        if (opts.integrate && st === 'passed' && git(cwd, ['merge', '--no-edit', 'daylight/' + t.id]).status !== 0) { git(cwd, ['merge', '--abort']); status[t.id] = 'escalated'; }
+        if (opts.failFast !== false && status[t.id] === 'escalated') halted = true;
+        opts.onTask?.(t.id, status[t.id]);
+        running.delete(t.id);
+        return t.id;
+      }));
+    }
+    if (!running.size) break;
+    await Promise.race(running.values());
   }
   return status;
 }

@@ -19,7 +19,10 @@ export async function preflight(cwd: string, cfg: any, o: { base: string; title?
     const d = spawnSync(o.docker ?? process.env.DAYLIGHT_DOCKER ?? 'docker', ['info'], { cwd, encoding: 'utf8' });
     if (d.status !== 0) errs.push('docker is not available (docker info failed): start Docker before running, deploy needs it');
     const cf = join(cwd, cfg.deploy.compose_file ?? 'docker-compose.yml');
-    if (existsSync(cf)) for (const p of composePorts(readFileSync(cf, 'utf8'))) if (!(await free(p))) errs.push('port ' + p + ' (published by ' + cfg.deploy.compose_file + ') is already in use: stop the process or container holding it');
+    if (existsSync(cf)) {
+      const own = spawnSync(o.docker ?? process.env.DAYLIGHT_DOCKER ?? 'docker', ['compose', '-f', cf, 'ps', '-q'], { cwd, encoding: 'utf8' }).stdout.trim() !== '';
+      for (const p of composePorts(readFileSync(cf, 'utf8'))) if (!(await free(p))) errs.push('port ' + p + ' (published by ' + cfg.deploy.compose_file + ') is already in use' + (own ? ' by an existing container from this compose project: run docker compose down' : ': stop the process or container holding it'));
+    }
   }
   if (o.title) { // a previous run of this very feature was squash-merged into the base: generators would find the behaviour "already present" and fail TDD
     const prior = git(cwd, ['log', '--format=%s', o.base]).stdout.split('\n').find((s) => s.startsWith('Daylight: ' + o.title + ' (#') || s === 'Daylight: ' + o.title);
