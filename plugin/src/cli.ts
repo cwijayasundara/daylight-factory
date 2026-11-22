@@ -152,7 +152,7 @@ if (cmd === 'config') {
 } else if (cmd === 'pr') {
   const PR = await import('./pr.ts'); const { resolveConfig } = await import('./config.ts');
   if (rest[0] === 'body') { console.log(PR.buildBody(process.cwd()).body); process.exit(0); }
-  if (rest[0] === 'update') { const u: any = PR.updatePr(process.cwd(), { branch: opt('branch')! }); if (u.error) fail(u.error); console.log(JSON.stringify(u)); process.exit(0); }
+  if (rest[0] === 'update') { const u: any = PR.updatePr(process.cwd(), { branch: opt('branch')!, local: flag('local') }); if (u.error) fail(u.error); console.log(JSON.stringify(u)); process.exit(0); }
   const r: any = await (rest[0] === 'create' ? PR.createPr(process.cwd(), { branch: opt('branch')!, base: opt('base') ?? 'main', title: opt('title') ?? 'Daylight change', push: !flag('no-push'), local: flag('local') })
     : PR.mergePr(process.cwd(), resolveConfig(process.cwd(), { base: opt('base-config') }), { branch: opt('branch')!, tier: (opt('tier') ?? 'medium') as any, local: flag('local'), base: opt('base') }));
   if (r.error) fail(r.error); console.log(JSON.stringify(r));

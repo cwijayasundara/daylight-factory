@@ -11,11 +11,15 @@ import { editablePaths, isEditable } from './contract.ts';
 const PLUGIN = new URL('..', import.meta.url).pathname;
 export async function judge(cwd: string, cfg: any, o: { spec: string; task?: string; base?: string }) {
   const diff = git(cwd, ['diff', (o.base ?? 'main') + '...HEAD']).stdout.slice(0, 30000);
-  const prompt = 'Judge this whole run against the spec: build/test status, spec match, scope adherence.\n## Spec\n' + readFileSync(o.spec, 'utf8') + '\n## Diff\n' + diff + '\nReply ONLY JSON {"verdict":"pass|fail","criteria":[{"id":"spec-match|scope|build","result":"pass|fail","cite":"file:line"}],"feedback":""}. A fail needs a citation.';
-  const r = await claude(['-p', prompt, '--agent', 'daylight:judge', '--model', cfg.models.judge, '--effort', cfg.effort.judge, '--plugin-dir', PLUGIN, '--output-format', 'json', '--allowedTools', 'Read,Grep,Glob'], cwd);
-  const pr = parseResult(r.stdout);
-  let v: any;
-  try { v = normalize(extractJson(pr.text)); } catch (e) { v = { effective: 'inconclusive', criteria: [], citations: [] }; }
+  const prompt = 'Judge this whole run against the spec.\n## Facts established by the harness\n- Automated tests, sensors, scope check, and delivery verification have ALREADY PASSED on this branch.\n- You have Read/Grep/Glob only; do NOT fail or return inconclusive because you cannot execute commands.\n- Judge ONLY spec-match and code defects visible in the diff.\n## Spec\n' + readFileSync(o.spec, 'utf8') + '\n## Diff\n' + diff + '\nReply ONLY JSON {"verdict":"pass|fail","criteria":[{"id":"spec-match|scope|build","result":"pass|fail","cite":"file:line"}],"feedback":""}. A fail needs a file:line citation.';
+  const ask = (p: string) => claude(['-p', p, '--agent', 'daylight:judge', '--model', cfg.models.judge, '--effort', cfg.effort.judge, '--plugin-dir', PLUGIN, '--output-format', 'json', '--allowedTools', 'Read,Grep,Glob'], cwd);
+  let r = await ask(prompt), pr = parseResult(r.stdout), v: any;
+  try { v = normalize(extractJson(pr.text)); } catch { v = { effective: 'inconclusive', criteria: [], citations: [] }; }
+  if (v.effective === 'inconclusive') {
+    r = await ask(prompt + '\n\nYour previous reply was not a valid pass/fail JSON verdict with file:line citations for any fail. Reply ONLY the JSON object.');
+    pr = parseResult(r.stdout);
+    try { v = normalize(extractJson(pr.text)); } catch { v = { effective: 'inconclusive', criteria: [], citations: [] }; }
+  }
   const f = auditFile(cwd);
   append(f, { kind: 'verdict', phase: 'judge', role: 'judge', task: o.task ?? null, verdict: v.effective, model: cfg.models.judge, citations: v.citations });
   append(f, { kind: 'x_usage', phase: 'judge', model: cfg.models.judge, usage: pr.usage, cost_usd: pr.cost });

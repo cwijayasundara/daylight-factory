@@ -7,7 +7,10 @@ const OUT_OF_SCOPE = /\b(hire|hiring|recruit|legal review|procure|hardware|offic
 
 export function triage(item: WorkItem, cfg: any, cwd: string, extraPaths: string[] = []) {
   const paths = [...new Set([...item.paths, ...extraPaths])];
-  const size = paths.length ? (paths.length <= 2 ? 'small' : paths.length <= 8 ? 'medium' : 'large') : item.body.length < 600 ? 'small' : item.body.length < 3000 ? 'medium' : 'large';
+  const acCount = new Set(item.body.match(/\bAC-\d+\b/g) ?? []).size;
+  const size = paths.length ? (paths.length <= 2 ? 'small' : paths.length <= 8 ? 'medium' : 'large')
+    : acCount ? (acCount <= 6 ? 'small' : acCount <= 15 ? 'medium' : 'large')
+    : item.body.length < 600 ? 'small' : item.body.length < 3000 ? 'medium' : 'large';
   const c = classify(paths, item.title, cfg);
   const tier: Tier = c.tier ?? (size === 'small' ? 'low' : 'medium');
   const out = item.scope === 'out' || OUT_OF_SCOPE.test(item.title + ' ' + item.body.slice(0, 400));

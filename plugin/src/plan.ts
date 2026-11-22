@@ -31,4 +31,13 @@ export const tddApplies = (t: Pick<Task, 'acs' | 'paths' | 'tdd'>, modes: Map<st
 
 /** Small, low-tier work: Gate 1 skips the Opus approver and the plan is one task (ADR-023). */
 export const isFastPath = (t: { size: string; tier: string }, cfg: { fast_path?: boolean }) => cfg.fast_path !== false && t.size === 'small' && t.tier === 'low';
-export const fastPlan = (spec: string, title: string): { tasks: Task[] } => ({ tasks: [{ id: 't1', title, acs: [...new Set(acIds(spec))], paths: ['src/', 'tests/', 'scripts/', 'docs/', 'package.json', 'README.md', 'Dockerfile', 'docker-compose.yml', '.dockerignore'], deps: [], size: 'small' }] });
+export function fastPlan(spec: string, title: string): { tasks: Task[] } {
+  const all = [...new Set(acIds(spec))], modes = acModes(spec);
+  const runAcs = all.filter((a) => modes.get(a)?.mode === 'run'), otherAcs = all.filter((a) => modes.get(a)?.mode !== 'run');
+  const broad = ['src/', 'tests/', 'scripts/', 'docs/', 'package.json', 'README.md', 'Dockerfile', 'docker-compose.yml', '.dockerignore'];
+  if (runAcs.length && otherAcs.length) return { tasks: [
+    { id: 't1', title, acs: otherAcs, paths: broad, deps: [], size: 'small' },
+    { id: 't2', title: title + ' (delivery)', acs: runAcs, paths: ['Dockerfile', 'docker-compose.yml', '.dockerignore', 'scripts/', 'package.json'], deps: ['t1'], size: 'small' },
+  ] };
+  return { tasks: [{ id: 't1', title, acs: all, paths: broad, deps: [], size: 'small' }] };
+}

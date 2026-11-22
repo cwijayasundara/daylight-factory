@@ -147,9 +147,9 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
   };
   const reviewText = () => ['code-review', 'security-review'].map((k) => { const f = join(cwd, '.daylight/reviews', k + '.txt'); return existsSync(f) ? '## ' + k + '\n' + readFileSync(f, 'utf8').slice(0, 6000) : ''; }).join('\n');
   const fixTask = async (round: number, feedback: string): Promise<boolean> => {
-    // ADR-019: a fix task is a normal task (generator + evaluator + sensors) fed the cited findings; broad paths, TDD waiver logged.
-    const t = { id: 'fix' + round, title: 'Address review findings (round ' + round + ')', acs: [] as string[], paths: ['src/', 'tests/', 'scripts/', 'docs/', 'package.json', 'README.md', 'Dockerfile', 'docker-compose.yml', '.dockerignore'], deps: [] as string[], size: 'medium' as const, tdd: false, feedback };
-    writeFileSync(planFile, JSON.stringify({ tasks: [...loadPlan(planFile), t] }, null, 2));
+    // ADR-019: a fix task is a normal task (generator + evaluator + sensors) fed the cited findings; broad paths, kept out of plan.json with unique id per session.
+    rs.fixCount = (rs.fixCount ?? 0) + 1; save();
+    const t = { id: 'fix' + rs.fixCount, title: 'Address review findings (round ' + round + ')', acs: [] as string[], paths: ['src/', 'tests/', 'scripts/', 'docs/', 'package.json', 'README.md', 'Dockerfile', 'docker-compose.yml', '.dockerignore'], deps: [] as string[], size: 'medium' as const, tdd: false, feedback };
     const s = await ph('fix', () => runInner(cwd, [t], cfg, { spec: join(dir, 'spec.md'), integrate: true, sensors: async (wt) => { const r = runFast(wt, cfg); return { ok: r.ok, messages: r.results.flatMap((x) => x.messages).join('\n') }; } }));
     return s[t.id] === 'passed';
   };
@@ -167,7 +167,7 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
     const changed = git(cwd, ['diff', '--name-only', o.base + '...HEAD']).stdout.split('\n').filter(Boolean);
     tier = classify(changed, '', cfg).tier ?? 'low';
     append(f, { kind: 'x_tier', phase: 'pr', tier, changed: changed.length });
-    const pr = await ph('pr', () => (prDone ? cmd(['pr', 'update', '--branch', branch]) : cmd(['pr', 'create', '--branch', branch, '--base', o.base, '--title', 'Daylight: ' + wi.title, ...(remote ? [] : ['--local', '--no-push'])])));
+    const pr = await ph('pr', () => (prDone ? cmd(['pr', 'update', '--branch', branch, ...(remote ? [] : ['--local'])]) : cmd(['pr', 'create', '--branch', branch, '--base', o.base, '--title', 'Daylight: ' + wi.title, ...(remote ? [] : ['--local', '--no-push'])])));
     if (pr.status !== 0) return stop('pr', pr.stderr);
     prDone = true; append(f, { kind: 'x_pr', phase: 'pr', out: pr.stdout.trim().slice(0, 200) });
     head = git(cwd, ['rev-parse', 'HEAD']).stdout.trim();

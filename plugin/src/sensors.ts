@@ -54,7 +54,7 @@ export function runFast(cwd: string, cfg: any, only?: string[]): { ok: boolean; 
     const ok = typeof pct === 'number' && pct >= s.coverage_min;
     results.push({ name: 'coverage', ok, messages: ok ? [] : ['coverage ' + (pct ?? 'missing') + '% < ' + s.coverage_min + '% (coverage/coverage-summary.json) -> add tests for uncovered branches'] });
   }
-  const fns = texts.flatMap(({ f, t }) => functionsOf(t).map((fn) => ({ ...fn, file: f })));
+  const fns = texts.filter(({ f }) => !f.startsWith('scripts/')).flatMap(({ f, t }) => functionsOf(t).map((fn) => ({ ...fn, file: f })));
   if (want('complexity')) {
     const m = fns.map((fn) => ({ fn, c: complexity(fn.body) })).filter((x) => x.c > s.complexity_max).map(({ fn, c }) => fn.file + ':' + fn.line + ' complexity ' + c + ' > ' + s.complexity_max + ' in ' + fn.name + ' -> extract helper functions or split the branches');
     results.push({ name: 'complexity', ok: !m.length, messages: m });

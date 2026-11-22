@@ -31,6 +31,7 @@ export function buildBody(cwd: string): { body: string; missing: string[] } {
   const hist = [
     ...evs.filter((e) => e.kind === 'x_check' && e.ok === false).map((e) => '- ' + e.stage + ' check failed: ' + String(e.msg ?? '').replace(/\s+/g, ' ').slice(0, 200)),
     ...evs.filter((e) => e.kind === 'verdict' && e.verdict !== 'pass').map((e) => '- ' + e.role + (e.task ? ' (' + e.task + ')' : '') + ' verdict ' + e.verdict + (e.citations?.length ? ' citing ' + e.citations.join(', ') : '')),
+    ...evs.filter((e) => e.kind === 'gate' && e.decision === 'reject').map((e) => '- gate ' + e.gate + ' rejected' + (e.head ? ' (' + String(e.head).slice(0, 7) + ')' : '') + (e.feedback ? ': ' + String(e.feedback).replace(/\s+/g, ' ').slice(0, 200) : '')),
     ...evs.filter((e) => e.kind === 'x_task_end' && /^fix/.test(String(e.task))).map((e) => '- ' + e.task + ' ' + e.status + ' after ' + e.attempts + ' attempt(s)'),
     ...evs.filter((e) => e.kind === 'x_tdd_waiver').map((e) => '- TDD waiver for ' + e.task + ': ' + e.reason),
   ];
@@ -49,11 +50,12 @@ export function createPr(cwd: string, o: { branch: string; base: string; title: 
   const r = spawnSync(process.env.DAYLIGHT_GH || 'gh', ['pr', 'create', '--base', o.base, '--head', o.branch, '--title', o.title, '--body-file', f], { cwd, encoding: 'utf8' });
   return r.status === 0 ? { url: r.stdout.trim() } : { error: 'gh pr create failed: ' + r.stderr };
 }
-export function updatePr(cwd: string, o: { branch: string }) {
+export function updatePr(cwd: string, o: { branch: string; local?: boolean }) {
   const { body, missing } = buildBody(cwd);
   if (missing.length) return { error: 'PR body is missing required sections: ' + missing.join(', ') };
-  const p = git(cwd, ['push', 'origin', o.branch]); if (p.status !== 0) return { error: 'push failed: ' + p.stderr };
   const f = join(cwd, '.daylight/pr-body.md'); writeFileSync(f, body);
+  if (o.local) return { updated: o.branch, body: f };
+  const p = git(cwd, ['push', 'origin', o.branch]); if (p.status !== 0) return { error: 'push failed: ' + p.stderr };
   const r = spawnSync(process.env.DAYLIGHT_GH || 'gh', ['pr', 'edit', o.branch, '--body-file', f], { cwd, encoding: 'utf8' });
   return r.status === 0 ? { updated: o.branch } : { error: 'gh pr edit failed: ' + r.stderr };
 }
