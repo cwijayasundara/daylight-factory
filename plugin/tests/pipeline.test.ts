@@ -88,3 +88,19 @@ test('ADR-024 fast path: a small low-tier PRD skips the Opus design gate and the
   assert.deepEqual([f.count('design'), f.count('gate1'), f.count('plan'), f.count('generator'), f.count('evaluator'), f.count('gate2')], [1, 0, 0, 1, 1, 0]);
   assert.ok(events(f.d, 'e1').some((e) => e.kind === 'x_fast_path'));
 });
+test('frozen run: --design-from and --plan-from skip design, Gate 1 and plan (no model calls), lint still gates, and the inner loop runs', () => {
+  const src = fixture(); const a = src.run(['--stop-after', 'plan']); assert.equal(a.res.stage, 'plan', JSON.stringify(a.res) + a.err);
+  const designDir = join(src.aux, 'frozen-design'); sh(src.d, 'mkdir -p ' + designDir + ' && cp docs/design/*.md ' + designDir + '/');
+  const f = fixture(); const r = f.run(['--design-from', designDir, '--plan-from', join(src.d, '.daylight/plan.json')]);
+  assert.equal(r.res.ok, true, JSON.stringify(r.res) + r.err);
+  assert.deepEqual([f.count('design'), f.count('gate1'), f.count('plan'), f.count('generator')], [0, 0, 0, 2]);
+  assert.ok(events(f.d, 'e1').some((e) => e.kind === 'x_frozen' && e.design && e.plan));
+});
+test('frozen run: a frozen plan that fails plan lint stops the run instead of running it', () => {
+  const src = fixture(); src.run(['--stop-after', 'plan']);
+  const designDir = join(src.aux, 'frozen-design'); sh(src.d, 'mkdir -p ' + designDir + ' && cp docs/design/*.md ' + designDir + '/');
+  const bad = JSON.parse(readFileSync(join(src.d, '.daylight/plan.json'), 'utf8')); bad.tasks[0].deps = ['nope']; const pf = put(src.aux, 'bad-plan.json', JSON.stringify(bad));
+  const f = fixture(); const r = f.run(['--design-from', designDir, '--plan-from', pf]);
+  assert.equal(r.res.ok, false); assert.equal(r.res.stage, 'plan'); assert.match(r.res.msg, /unknown task/);
+  assert.equal(f.count('generator'), 0);
+});

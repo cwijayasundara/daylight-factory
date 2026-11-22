@@ -16,7 +16,7 @@ export function generatorContext(t: Pick<Task, 'acs'>, o: { spec: string; sensor
 export function tddInstruction(t: Task, cli: string, testCmd: string, mode: 'tdd' | 'run' | 'none' = tddApplies(t) ? 'tdd' : 'none'): string {
   if (mode === 'run') return '\nThis is the delivery task: it is verified by actually building and starting the service (docker compose up --build, the health command, the smoke command), not by unit tests. There is no red step and no waiver. Make it work, run those commands yourself if you can, and commit.';
   if (mode !== 'tdd') return '\nThere is no red step for this task: do not run the red command or declare a waiver. Implement the change and commit.';
-  return '\nFollow TDD with separate commits: (1) write failing tests whose names contain their AC id, run: node ' + cli + ' red --task ' + t.id + ' --cmd "' + testCmd + '" (it must exit 0 = recorded red; if your new tests already pass because the behaviour exists, run the same command with --waive "<reason>" instead: the waiver is logged and the evaluator will judge it), then git add -A && git commit -m "test: ..."; (2) implement until green; commit. Stay in the allowed paths.';
+  return '\nFollow TDD: write failing tests first. Test names must contain their AC id (e.g. "AC-3 returns 404"); commit the tests, then the implementation (' + testCmd + ' runs them). The harness checks that your new tests FAIL on the unchanged base tree and PASS on yours; there is no red command and no waiver. If the behaviour already exists, still add AC-tagged tests that prove it. Stay within what you may edit.';
 }
 
 /** What the generator may touch, stated once, in the same words the harness enforces. */
@@ -26,9 +26,8 @@ export function generatorContract(t: Task, tasks: Task[]): string {
 }
 
 /** The whole evaluator prompt: rubric inline (the evaluator has no Skill tool), AC text, and what the harness already decided. */
-export function evaluatorPrompt(o: { task: Task; acText: string[]; editable: string[]; diff: string; rubric: string; waiver: string; extra?: string }): string {
+export function evaluatorPrompt(o: { task: Task; acText: string[]; editable: string[]; diff: string; rubric: string; extra?: string }): string {
   return 'Evaluate task ' + o.task.id + ': ' + o.task.title + '\n\n## Rubric\n' + o.rubric.trim() + '\n\n## Acceptance criteria of this task\n' + (o.acText.length ? o.acText.map((a) => '- ' + a).join('\n') : '- (none: judge the diff against the findings below)') +
     '\n\n## Already established by the harness (do not re-judge)\nThe scope check, the TDD evidence and the sensors (tests, types, lint, complexity) have already passed for this diff. Files this task may edit: ' + o.editable.join(', ') + ' (plus test files). architecture.md is guidance: fail only against the acceptance criteria text above. Do not read .daylight/.' +
-    (o.waiver ? '\nThe generator declared a TDD waiver in this attempt: "' + o.waiver + '". Fail the task with a citation if it is not credible (the diff adds behaviour that was not already tested).' : '') + (o.extra ? '\n' + o.extra : '') +
-    '\n\n## Diff\n' + o.diff + '\n\nReply ONLY JSON {"verdict":"pass|fail","criteria":[{"id":"..","result":"pass|fail","cite":"file:line or test name"}],"feedback":".."}';
+        '\n\n## Diff\n' + o.diff + '\n\nReply ONLY JSON {"verdict":"pass|fail","criteria":[{"id":"..","result":"pass|fail","cite":"file:line or test name"}],"feedback":".."}';
 }

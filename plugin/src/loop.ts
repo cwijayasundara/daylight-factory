@@ -7,9 +7,9 @@ import { git, addWorktree } from './worktree.ts';
 import { normalize } from './verdict.ts';
 import { extractJson } from './lib/json.ts';
 import { generatorContext } from './context.ts';
-import { scopeViolations, repeatsPrevious, classifyFailure, editablePaths, needsFreshStart } from './contract.ts';
-import { tddCheck, waiverFor } from './tdd.ts';
-import { append, auditFile, readLines } from './lib/events.ts';
+import { scopeViolations, repeatsPrevious, classifyFailure, editablePaths } from './contract.ts';
+import { redAtBase } from './tdd.ts';
+import { append, auditFile } from './lib/events.ts';
 import { taskMode, acModes, type Task } from './plan.ts';
 import { verifyDelivery } from './delivery.ts';
 import { tddInstruction, generatorContract, evaluatorPrompt } from './context.ts';
@@ -35,14 +35,14 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
   append(file, { kind: 'x_task_start', phase: 'inner', task: t.id, base: wt.base });
   const specText = opts.spec && existsSync(opts.spec) ? readFileSync(opts.spec, 'utf8') : '', mode = taskMode(t, acModes(specText)), tdd = mode === 'tdd';
   if (!tdd) append(file, { kind: 'x_tdd_waiver', phase: 'inner', task: t.id, reason: mode === 'run' ? 'delivery task: proven by running it, not by a unit test' : 'no behaviour ACs to test first' });
-  let feedback = '', diff = '', prevComp: string[] | undefined, citeHistory: string[][] = [], fail: { cls: string; reason: string } = { cls: 'generator', reason: 'retry cap reached' }, since = 0;
-  const editable = editablePaths(t, opts.tasks ?? [t]), lineCount = () => readLines(file).length;
+  let feedback = '', diff = '', prevComp: string[] | undefined, citeHistory: string[][] = [], fail: { cls: string; reason: string } = { cls: 'generator', reason: 'retry cap reached' };
+  const editable = editablePaths(t, opts.tasks ?? [t]);
   const rubric = readFileSync(join(PLUGIN, 'skills/evaluator-rubric/SKILL.md'), 'utf8').replace(/^---[\s\S]*?---\s*/, '');
   const rd = (p: string) => (existsSync(p) ? readFileSync(p, 'utf8') : '');
   const ctx = generatorContext(t, { spec: opts.spec ? rd(opts.spec) : '', sensors: cfg.sensors ?? {}, conventions: rd(join(cwd, '.daylight/ingest/conventions.md')) });
   const attempts = 1 + cfg.retries.task;
   for (let n = 1; n <= attempts; n++) {
-    const effort = effortFor(t, n, cfg), attemptStart = lineCount();
+    const effort = effortFor(t, n, cfg);
     const prompt = 'Task ' + t.id + ': ' + t.title + '\nAcceptance criteria: ' + t.acs.join(', ') + '\n' + generatorContract(t, opts.tasks ?? [t]) + '\n\n' + ctx + '\n' +
       tddInstruction(t, join(PLUGIN, 'src/cli.ts'), cfg.sensors.commands.tests ?? 'npm test', mode) + (t.feedback ? '\n\n## Review findings to fix\n' + t.feedback : '') + (n > 1 ? '\n\n## Diff so far\n' + diff + '\n\n## Cited feedback to fix\n' + feedback : '');
     append(file, { kind: 'x_context', phase: 'inner', task: t.id, attempt: n, role: 'generator', tokens: Math.ceil(prompt.length / 4), chars: prompt.length, budget: cfg.context.budget_tokens, over_budget: Math.ceil(prompt.length / 4) > cfg.context.budget_tokens });
@@ -55,7 +55,10 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
     const computational: string[] = [];
     computational.push(...scopeViolations(git(wt.path, ['diff', '--name-only', git(wt.path, ['merge-base', wt.base, 'HEAD']).stdout.trim() || wt.base, 'HEAD']).stdout.split('\n').filter(Boolean), t, cfg.guard?.protected_paths ?? [], editable));
     if (!diff.trim()) computational.push('the attempt changed nothing relative to the task start: there is nothing to evaluate (behaviour already present, or the task has no work)');
-    if (tdd && diff.trim()) computational.push(...tddCheck(cwd, wt.base, wt.branch, t.id, since));
+    if (tdd && diff.trim()) { // TDD by evidence: the new tests must fail on the base tree (commit order is irrelevant)
+      const rb = redAtBase(cwd, wt.base, wt.branch, cfg.sensors.commands.tests ?? 'npm test'); append(file, { kind: 'x_red_at_base', phase: 'inner', task: t.id, attempt: n, ok: rb.ok, outcome: rb.kind, msg: rb.msg });
+      if (!rb.ok) computational.push(rb.msg);
+    }
     if (opts.sensors) { const s = await opts.sensors(wt.path, t); if (!s.ok) computational.push(s.messages); }
     if (mode === 'run' && !computational.length) { // a delivery is proven by running it: build, health, smoke (no LLM can judge that)
       const dv = await verifyDelivery(wt.path, cfg); append(file, { kind: 'x_delivery', phase: 'inner', task: t.id, attempt: n, ok: dv.ok, msg: dv.msg.slice(0, 300) });
@@ -69,17 +72,11 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
       const cc = classifyFailure({ messages: computational, editable });
       if (cc.cls !== 'generator') { fail = cc; break; }
       if (repeated) { append(file, { kind: 'x_repeat_failure', phase: 'inner', task: t.id, attempt: n }); feedback += '\n(the same failure repeated on consecutive attempts)'; fail = { cls: 'generator', reason: 'the same computational failure twice' }; break; }
-      if (needsFreshStart(computational) && n < attempts) { // history cannot be edited forward: restart the branch, keep the discarded diff in the prompt
-        git(wt.path, ['reset', '-q', '--hard', wt.base]); git(wt.path, ['clean', '-fdq', '-e', 'node_modules']);
-        append(file, { kind: 'x_tdd_reset', phase: 'inner', task: t.id, attempt: n }); since = lineCount(); // red and waivers from before the reset are dead
-        feedback += '\n(your branch was reset to its start because the first commit had no failing test; the discarded diff is shown above. Start over: commit failing tests first, record red, then implement.)';
-      }
       continue;
     }
     prevComp = undefined;
-    const waiver = tdd ? waiverFor(cwd, t.id, attemptStart) : ''; // only a waiver declared in THIS attempt, never one from a discarded attempt
     const acText = t.acs.map((a) => { const m = new RegExp('\\*\\*' + a + '\\*\\*\\s*(.*)').exec(opts.spec ? rd(opts.spec) : ''); return a + (m ? ': ' + m[1].trim() : ''); });
-    const ep = evaluatorPrompt({ task: t, acText, editable, diff, rubric, waiver, extra: (opts.evaluatorExtra ? await opts.evaluatorExtra(wt.path, t) : '') + (t.feedback ? '\nFindings this task must fix:\n' + t.feedback : '') });
+    const ep = evaluatorPrompt({ task: t, acText, editable, diff, rubric, extra: (opts.evaluatorExtra ? await opts.evaluatorExtra(wt.path, t) : '') + (t.feedback ? '\nFindings this task must fix:\n' + t.feedback : '') });
     const eEffort = n >= 3 ? 'high' : cfg.effort.evaluator;
     append(file, { kind: 'x_dispatch', phase: 'inner', task: t.id, attempt: n, role: 'evaluator', model: cfg.models.evaluator, effort: eEffort });
     const evalArgs = (m: string) => ['-p', ep, '--agent', 'daylight:evaluator', '--model', m, '--effort', eEffort, '--plugin-dir', PLUGIN, '--output-format', 'json', '--allowedTools', 'Read,Grep,Glob'];

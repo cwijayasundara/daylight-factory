@@ -19,7 +19,7 @@ test('tddApplies: planner opt-out is honoured', () => {
   assert.equal(tddApplies(t(['src/a.ts'], false)), false);
 });
 test('tddInstruction: code tasks get the red/waiver steps, config-only tasks get neither', () => {
-  assert.match(tddInstruction(t(['src/a.ts']), 'cli.ts', 'npm test'), /red --task t --cmd "npm test"/);
+  assert.match(tddInstruction(t(['src/a.ts']), 'cli.ts', 'npm test'), /FAIL on the unchanged base tree/);
   const c = tddInstruction(t(['Dockerfile']), 'cli.ts', 'npm test');
-  assert.doesNotMatch(c, /--waive|red --task/); assert.match(c, /no red step/);
+  assert.doesNotMatch(c, /--waive|red --task|base tree/); assert.match(c, /no red step/);
 });

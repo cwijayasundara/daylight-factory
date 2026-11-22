@@ -194,7 +194,7 @@ if (cmd === 'config') {
 } else if (cmd === 'run') {
   const { runPipeline, summarize } = await import('./pipeline.ts'); const { resolveConfig } = await import('./config.ts'); const { auditFile, runId } = await import('./lib/events.ts'); const { writeFileSync } = await import('node:fs');
   const cfg = resolveConfig(process.cwd(), { config: opt('config') });
-  const r = await runPipeline(process.cwd(), rest[0], cfg, { base: opt('base') ?? (await import('./worktree.ts')).git(process.cwd(), ['rev-parse', '--abbrev-ref', 'HEAD']).stdout.trim(), agents: flag('agents'), resume: flag('resume'), stopAfter: opt('stop-after') });
+  const r = await runPipeline(process.cwd(), rest[0], cfg, { base: opt('base') ?? (await import('./worktree.ts')).git(process.cwd(), ['rev-parse', '--abbrev-ref', 'HEAD']).stdout.trim(), agents: flag('agents'), resume: flag('resume'), stopAfter: opt('stop-after'), designFrom: opt('design-from'), planFrom: opt('plan-from') });
   const out = opt('summary-out'); if (out) { const { readdirSync, existsSync } = await import('node:fs'); writeFileSync(out, JSON.stringify(summarize(auditFile(process.cwd(), runId()), { run: runId(), command: 'daylight run ' + rest[0] + (flag('agents') ? ' --agents' : ''), prd: rest[0], design: existsSync('docs/design') ? readdirSync('docs/design').filter((n) => !n.startsWith('.')) : [], result: r }), null, 2)); }
   console.log(JSON.stringify(r)); process.exit(r.ok ? 0 : 1);
 } else if (cmd === 'selfcheck' && rest[0] === 'no-codemode-var') {

@@ -27,7 +27,7 @@ const PLUGIN = join(dirname(fileURLToPath(import.meta.url)), '..'), CLI = join(P
 const authorTools = 'Read,Write,Edit,Glob,Grep,Bash';
 export interface Result { ok: boolean; stage: string; msg: string }
 
-export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base: string; agents: boolean; resume?: boolean; stopAfter?: string }): Promise<Result> {
+export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base: string; agents: boolean; resume?: boolean; stopAfter?: string; designFrom?: string; planFrom?: string }): Promise<Result> {
   const f = auditFile(cwd), run = runId(), branch = 'daylight/run-' + run;
   // ADR-020: coarse checkpoints (design, plan, inner) in .daylight/run-state.json so a retry resumes instead of restarting from design
   const rsFile = join(cwd, '.daylight/run-state.json');
@@ -77,7 +77,14 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
   }
   const dir = join(cwd, cfg.design_dir);
   const designDone = !!rs.phases.design && existsSync(join(dir, 'spec.md')) && verifyGate(cwd, 'design', dir) === null;
-  const design: any = designDone ? load(cwd).gates.design : await ph('design', async () => {
+  if (o.designFrom || o.planFrom) append(f, { kind: 'x_frozen', phase: 'design', design: o.designFrom ?? null, plan: o.planFrom ?? null });
+  const design: any = designDone ? load(cwd).gates.design : o.designFrom ? await ph('design', async () => { // frozen design: replay the checks on saved artefacts, no model call
+    mkdirSync(dir, { recursive: true });
+    for (const n of ['intent.md', 'spec.md', 'architecture.md']) copyFileSync(join(o.designFrom!, n), join(dir, n));
+    const l = cmd(['design', 'lint', '--dir', dir, '--prd', arg]); if (l.status !== 0) return stop('design', 'frozen design fails lint:\n' + l.stderr);
+    request(cwd, 'design'); decide(cwd, 'design', { decision: 'approve', source: 'agent', feedback: '', scores: {}, dir, cap: cfg.retries.design, model: 'frozen' });
+    return load(cwd).gates.design;
+  }) : await ph('design', async () => {
     let feedback = '';
     for (let rev = 0; rev < cfg.retries.design; rev++) {
       const brown = existsSync(join(cwd, '.daylight/ingest/conventions.md'));
@@ -102,7 +109,8 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
   mark('design'); { const s = stopIf('design'); if (s) return s; }
 
   const planDone = !!rs.phases.plan && existsSync(join(cwd, '.daylight/plan.json'));
-  if (!planDone && fast) { mkdirSync(join(cwd, '.daylight'), { recursive: true }); writeFileSync(join(cwd, '.daylight/plan.json'), JSON.stringify(fastPlan(readFileSync(join(dir, 'spec.md'), 'utf8'), wi.title), null, 2)); }
+  if (!planDone && o.planFrom) { mkdirSync(join(cwd, '.daylight'), { recursive: true }); copyFileSync(o.planFrom, join(cwd, '.daylight/plan.json')); }
+  else if (!planDone && fast) { mkdirSync(join(cwd, '.daylight'), { recursive: true }); writeFileSync(join(cwd, '.daylight/plan.json'), JSON.stringify(fastPlan(readFileSync(join(dir, 'spec.md'), 'utf8'), wi.title), null, 2)); }
   else if (!planDone) await ph('plan', async () => {
     let err = '';
     for (let i = 0; i < 3; i++) {

@@ -25,7 +25,8 @@ Root causes: no pipeline test/resume (DONE in task 1); Gate 2 LLM is a non-deter
 
 ## Deep dive 2 (Fable 5.2, docs/analysis/deep-dive-2-fable-5-2.md): implemented items 1-6, ADR-024
 - Done: shared task contract (cumulative ownership, tests always allowed), attempt-scoped waivers/red, failure triage (generator|plan|harness, fail-fast), narrow evaluator with inline rubric, AC verification modes ([test]/[run]/[sensor]), delivery verified by running compose/health/smoke before merge (no evaluator), trace evidence, planner shape (behaviour chain + one delivery task), prose plan-lint rules deleted, plan loop stops after 3 failed lint tries.
-- NOT done: item 0 corpus is partial (the run-brownfield* clones were deleted from disk before the corpus could be captured; tests/corpus.test.ts holds the plans copied from the audit output), item 7 branch-level TDD (red-at-base) replacing commit-order TDD + reset + waivers, items 8-13 (frozen-plan runs, fix-task ids, scheduler, sensor scope, review cost).
+- Also done: item 7 red-at-base TDD (replaces first-commit check, reset, waivers in the loop) and item 8 frozen runs (--design-from/--plan-from).
+- NOT done: item 0 corpus is partial (the run-brownfield* clones were deleted from disk before the corpus could be captured; tests/corpus.test.ts holds the plans copied from the audit output), items 9-13 (fix-task ids and merged-branch reuse, scheduler, sensor scope, review cost, STATUS open items).
 - Next: frozen-plan/offline replay, then the acceptance protocol (10 clean unattended runs over two brownfield PRDs + greenfield). No live run has been done on this new shape yet.
 
 ## Plan: steps 1-6 DONE
