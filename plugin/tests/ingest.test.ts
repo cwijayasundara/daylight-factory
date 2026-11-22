@@ -50,9 +50,39 @@ test('AC-34 ingest changes no tracked source files', () => {
   const d = tsRepo(); ing(d);
   assert.equal(sh(d, 'git status --porcelain --untracked-files=no').stdout.trim(), '');
 });
-test('AC-35 a non-TypeScript repo stops with unsupported language and proposes nothing', () => {
-  const d = tmp(); put(d, 'src/app.py', 'print(1)\n'); put(d, 'src/b.py', 'print(2)\n'); put(d, 'requirements.txt', 'x\n');
+test('AC-35 an unsupported language repo stops with unsupported language and proposes nothing', () => {
+  const d = tmp(); put(d, 'src/main.go', 'package main\n'); put(d, 'src/b.go', 'package main\n'); put(d, 'go.mod', 'module x\n');
   const r = ing(d);
   assert.notEqual(r.code, 0); assert.match(r.err + r.out, /unsupported language/);
   assert.ok(!existsSync(join(d, '.daylight/ingest/daylight.yaml.diff')));
+});
+
+test('ingest supports Python 3.14 repos (pyproject.toml, pytest, ruff, mypy, uv)', () => {
+  const d = tmp();
+  put(d, 'pyproject.toml', '[project]\nname = "demo"\nrequires-python = ">=3.14"\n[tool.ruff]\nline-length = 100\n[tool.mypy]\nstrict = true\n');
+  put(d, 'uv.lock', '');
+  put(d, 'src/app.py', 'def ping() -> str:\n    return "pong"\n');
+  put(d, 'tests/test_app.py', 'def test_ac_1_ping():\n    assert True\n');
+  sh(d, 'git init -q -b main && git add -A && git -c user.name=t -c user.email=t@t commit -qm init');
+  const r = ing(d);
+  assert.equal(r.code, 0, r.err + r.out);
+  const conv = readFileSync(join(d, '.daylight/ingest/conventions.md'), 'utf8');
+  assert.match(conv, /Python >=3\.14/); assert.match(conv, /pytest/); assert.match(conv, /ruff/); assert.match(conv, /mypy/); assert.match(conv, /uv/);
+  const diff = readFileSync(join(d, '.daylight/ingest/daylight.yaml.diff'), 'utf8');
+  assert.match(diff, /uv run pytest -v/); assert.match(diff, /uv run ruff check \./); assert.match(diff, /uv run mypy \./);
+});
+
+test('ingest supports Rust repos (Cargo.toml, cargo test, clippy, check)', () => {
+  const d = tmp();
+  put(d, 'Cargo.toml', '[package]\nname = "demo"\nversion = "0.1.0"\nedition = "2024"\n');
+  put(d, 'Cargo.lock', '');
+  put(d, 'src/lib.rs', 'pub fn ping() -> &\'static str { "pong" }\n');
+  put(d, 'tests/ping_test.rs', '#[test]\nfn test_ac_1_ping() { assert_eq!(1, 1); }\n');
+  sh(d, 'git init -q -b main && git add -A && git -c user.name=t -c user.email=t@t commit -qm init');
+  const r = ing(d);
+  assert.equal(r.code, 0, r.err + r.out);
+  const conv = readFileSync(join(d, '.daylight/ingest/conventions.md'), 'utf8');
+  assert.match(conv, /Rust/); assert.match(conv, /cargo test/); assert.match(conv, /cargo clippy/);
+  const diff = readFileSync(join(d, '.daylight/ingest/daylight.yaml.diff'), 'utf8');
+  assert.match(diff, /cargo test/); assert.match(diff, /cargo clippy/); assert.match(diff, /cargo check/);
 });

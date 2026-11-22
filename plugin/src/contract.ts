@@ -2,7 +2,7 @@
 import { globRe } from './tiers.ts';
 import type { Task } from './plan.ts';
 
-export const TEST_FILE = /(^|\/)(tests?|__tests__)\/|\.(test|spec)\.[jt]sx?$/;
+export const TEST_FILE = /(^|\/)(tests?|__tests__)\/|\.(test|spec)\.[jt]sx?$|(?:^|\/)test_[^/]+\.py$|_test\.(py|rs)$/;
 
 /** Paths a task may edit: its own plus those of every task in its dependency closure (they ran strictly earlier, so nothing can conflict). */
 export function editablePaths(t: Pick<Task, 'id' | 'paths' | 'deps'>, tasks: Pick<Task, 'id' | 'paths' | 'deps'>[]): string[] {

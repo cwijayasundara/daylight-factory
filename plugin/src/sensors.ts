@@ -8,9 +8,9 @@ import { append, auditFile, SECRETS } from './lib/events.ts';
 import { globRe } from './tiers.ts';
 
 export interface Res { name: string; ok: boolean; messages: string[] }
-const SKIP = ['node_modules', '.git', '.daylight', 'coverage', 'dist', 'tests', 'test'];
+const SKIP = ['node_modules', '.git', '.daylight', 'coverage', 'dist', 'tests', 'test', '.venv', '__pycache__', 'target'];
 const walk = (d: string): string[] => readdirSync(d).flatMap((n) => (SKIP.includes(n) ? [] : statSync(join(d, n)).isDirectory() ? walk(join(d, n)) : [join(d, n)]));
-const srcFiles = (cwd: string) => walk(cwd).filter((f) => /\.(tsx?|jsx?)$/.test(f) && !f.endsWith('.d.ts') && !/\.(test|spec)\./.test(f));
+const srcFiles = (cwd: string) => walk(cwd).filter((f) => /\.(tsx?|jsx?|py|rs)$/.test(f) && !f.endsWith('.d.ts') && !/\.(test|spec)\./.test(f));
 const lineOf = (s: string, i: number) => s.slice(0, i).split('\n').length;
 
 const START = /(?:function\s+([\w$]+)\s*\([^)]*\)[^{;]*\{)|(?:(?:const|let|var)\s+([\w$]+)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[\w$]+)\s*(?::[^=>{]+)?=>\s*\{)|(?:^[ \t]*(?:(?:public|private|protected|static|async)\s+)*([\w$]+)\s*\([^)]*\)\s*(?::\s*[^{;]+)?\{)/gm;

@@ -9,6 +9,8 @@ import { capture } from '../src/review.ts';
 import { triage } from '../src/triage.ts';
 import { resolveConfig } from '../src/config.ts';
 import { auditFile } from '../src/lib/events.ts';
+import { parseTap, matrix } from '../src/trace.ts';
+import { TEST_FILE } from '../src/contract.ts';
 
 function tmpRepo() {
   const dir = tmp();
@@ -85,4 +87,19 @@ test('triage: sizes PRD by unique AC count when no paths are given', () => {
   const res = triage({ id: 'w1', source: 'prd', title: 'Small feature', body, paths: [], evidence: [] }, cfg, dir);
   assert.equal(res.size, 'small');
   assert.equal(res.tier, 'low');
+});
+
+test('trace + contract: supports Python (pytest -v) and Rust (cargo test) output and test file patterns', () => {
+  assert.equal(TEST_FILE.test('tests/test_app.py'), true);
+  assert.equal(TEST_FILE.test('src/app_test.py'), true);
+  assert.equal(TEST_FILE.test('src/lib_test.rs'), true);
+  const spec = '- **AC-1** [test] health\n- **AC-2** [test] ping\n';
+  const pyOut = 'tests/test_app.py::test_ac_1_health PASSED\ntests/test_app.py::test_ac_2_ping FAILED\n';
+  const pyRows = matrix(spec, parseTap(pyOut));
+  assert.equal(pyRows[0].result, 'PASS');
+  assert.equal(pyRows[1].result, 'FAIL');
+  const rsOut = 'test ac_1_health ... ok\ntest ac_2_ping ... ok\n';
+  const rsRows = matrix(spec, parseTap(rsOut));
+  assert.equal(rsRows[0].result, 'PASS');
+  assert.equal(rsRows[1].result, 'PASS');
 });

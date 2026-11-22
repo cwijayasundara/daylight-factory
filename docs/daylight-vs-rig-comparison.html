@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daylight vs Rig — Deep Architecture &amp; AI-Native SDLC Comparison</title>
+<style>
+  :root {
+    --bg: #f8faf9;
+    --card: #ffffff;
+    --ink: #0f2920;
+    --muted: #4b655c;
+    --border: #d4e6de;
+    --dl: #0a6648;
+    --dl-soft: #e6f5ef;
+    --rig: #1d4ed8;
+    --rig-soft: #eff6ff;
+    --accent: #b45309;
+    --accent-soft: #fef3c7;
+    --good: #15803d;
+    --warn: #b45309;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.6;
+  }
+  header {
+    background: linear-gradient(135deg, #073b2a 0%, #0a6648 50%, #1e3a8a 100%);
+    color: #fff;
+    padding: 48px 24px 40px;
+  }
+  .wrap { max-width: 1220px; margin: 0 auto; padding: 0 24px; }
+  header h1 { margin: 0 0 10px; font-size: 34px; letter-spacing: -0.02em; }
+  header p { margin: 0; font-size: 16px; opacity: 0.92; max-width: 820px; }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+  .pill {
+    display: inline-block; padding: 5px 12px; border-radius: 999px;
+    font-size: 12px; font-weight: 600; background: rgba(255,255,255,0.16); color: #fff;
+  }
+  main { padding: 36px 0 64px; }
+  h2 {
+    font-size: 24px; margin: 40px 0 16px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--border); color: var(--ink);
+  }
+  h3 { font-size: 17px; margin: 20px 0 8px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 22px 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .card.dl { border-top: 4px solid var(--dl); }
+  .card.rig { border-top: 4px solid var(--rig); }
+  .card.combo { border-top: 4px solid var(--accent); }
+  .badge {
+    display: inline-block; padding: 3px 9px; border-radius: 6px;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .badge.dl { background: var(--dl-soft); color: var(--dl); }
+  .badge.rig { background: var(--rig-soft); color: var(--rig); }
+  .badge.both { background: var(--accent-soft); color: var(--accent); }
+  .stat-row { display: flex; gap: 14px; flex-wrap: wrap; margin: 14px 0 6px; }
+  .stat {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 14px; min-width: 120px; flex: 1;
+  }
+  .stat .num { font-size: 20px; font-weight: 800; color: var(--ink); }
+  .stat .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  table {
+    width: 100%; border-collapse: collapse; background: var(--card);
+    border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+    font-size: 14px;
+  }
+  th, td { padding: 13px 15px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: #f0f6f3; font-weight: 700; font-size: 13px; color: var(--ink); }
+  th.dl-col { background: var(--dl-soft); color: var(--dl); }
+  th.rig-col { background: var(--rig-soft); color: var(--rig); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafdfb; }
+  .score { font-weight: 700; }
+  .score.hi { color: var(--good); }
+  .score.mid { color: var(--warn); }
+  code {
+    background: #eef4f1; padding: 2px 6px; border-radius: 5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
+  }
+  ul { margin: 8px 0 0; padding-left: 20px; }
+  li { margin: 5px 0; }
+  .callout {
+    background: #ffffff; border-left: 4px solid var(--dl); border-radius: 0 12px 12px 0;
+    padding: 18px 22px; margin: 18px 0; border-top: 1px solid var(--border);
+    border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  }
+  .diagram-box {
+    background: #fff; border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px; overflow-x: auto;
+  }
+  footer {
+    text-align: center; color: var(--muted); font-size: 13px;
+    padding: 24px; border-top: 1px solid var(--border); margin-top: 40px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>Daylight vs Rig: Deep Architecture Comparison</h1>
+    <p>A side-by-side technical analysis of two Claude Code SDLC harnesses built around the Anthropic AI-Native SDLC Playbook — comparing an <strong>autonomous lights-on software factory (Daylight)</strong> against a <strong>human-in-the-loop team governance harness (Rig)</strong>.</p>
+    <div class="pill-row">
+      <span class="pill">Daylight: eigen_work_v2.0 (main)</span>
+      <span class="pill">Rig: rig_v1</span>
+      <span class="pill">Runtime: Node.js + TypeScript (zero build)</span>
+      <span class="pill">Reference: Anthropic AI-Native SDLC Playbook</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- 1. EXECUTIVE SUMMARY -->
+  <h2>1. Executive Summary: Two Complementary Poles</h2>
+  <div class="callout">
+    <strong>The Core Insight:</strong> Daylight and Rig are not duplicates — they solve <strong>different operating models</strong>.
+    <strong>Daylight</strong> optimizes for <em>autonomous throughput</em> (hand a PRD to a headless orchestrator and get a reviewed, deployed, smoke-tested service with <strong>0 or 2 human touchpoints</strong>).
+    <strong>Rig</strong> optimizes for <em>team engineering discipline &amp; governance</em> (interactive Claude Code sessions where <strong>humans always approve</strong>, contracts freeze on approval, mutation-diff + hidden holdout tests block regressions, and CI + branch protection enforce the boundary across 8 language stacks).
+  </div>
+
+  <div class="grid-2">
+    <div class="card dl">
+      <span class="badge dl">Daylight (eigen_work_v2.0)</span>
+      <h3>Autonomous "Lights-On" Software Factory</h3>
+      <p>A thin, headless-first Claude Code plugin and CLI orchestrator (<code>daylight run prd.md --agents</code>) that drives a work item from PRD/issue/alert all the way through design, planning, isolated worktree TDD, pre-merge Docker delivery, reviews, PR, merge, deploy, smoke tests, and self-improvement.</p>
+      <div class="stat-row">
+        <div class="stat"><div class="num">0 or 2</div><div class="lbl">Human Gates</div></div>
+        <div class="stat"><div class="num">~1,963</div><div class="lbl">Custom LOC</div></div>
+        <div class="stat"><div class="num">224</div><div class="lbl">Unit Tests</div></div>
+        <div class="stat"><div class="num">TS / Node</div><div class="lbl">Target Stack</div></div>
+      </div>
+      <ul>
+        <li><strong>Best for:</strong> Unattended greenfield/brownfield feature delivery, scheduled maintenance, alert-to-fix loops, single-command PR-to-deploy.</li>
+        <li><strong>Signature strengths:</strong> Pre-merge Docker delivery verification (<code>[run]</code> ACs), red-at-base TDD, dynamic <code>Promise.race</code> worktree scheduler, hash-chained audit JSONL + HTML report, dream-job self-improvement PRs.</li>
+      </ul>
+    </div>
+
+    <div class="card rig">
+      <span class="badge rig">Rig (rig_v1)</span>
+      <h3>Human-in-the-Loop Team AI-SDLC Harness</h3>
+      <p>A comprehensive behavioural harness and vendored governance layer (<code>/rig:start</code> → <code>/rig:plan</code> → <code>/rig:approve</code> → <code>/rig:build</code> → <code>/rig:test</code> → <code>/rig:pr</code>, plus sprint <code>/rig:chart</code>) built for multi-engineer teams adopting Claude Code safely in production repos.</p>
+      <div class="stat-row">
+        <div class="stat"><div class="num">Human</div><div class="lbl">Always Approves</div></div>
+        <div class="stat"><div class="num">17</div><div class="lbl">Skills (/rig:*)</div></div>
+        <div class="stat"><div class="num">8 Stacks</div><div class="lbl">Node/Py/Java/Go/Rust/.NET</div></div>
+        <div class="stat"><div class="num">100+</div><div class="lbl">Scripts &amp; Evals</div></div>
+      </div>
+      <ul>
+        <li><strong>Best for:</strong> Engineering teams working interactively in Claude Code across polyglot repos, regulated/enterprise CI governance, sprint-level PRD charting.</li>
+        <li><strong>Signature strengths:</strong> Human-only approvals/waivers, mutation-diff scoring, hidden black-box holdout tests, CI <code>rig-check</code> + revert breaker + review-health audit seeding, vendored standalone mode (works in cloud sessions), empirical eval/ablation suite.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 2. VISUAL ARCHITECTURE COMPARISON -->
+  <h2>2. Operating Loop Side-by-Side</h2>
+  <div class="diagram-box">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 310" width="100%" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+      <!-- Daylight Row -->
+      <rect x="10" y="12" width="1120" height="132" rx="12" fill="#e6f5ef" stroke="#7bc6a8" stroke-width="1.5"/>
+      <text x="28" y="38" font-size="14" font-weight="700" fill="#0a6648">DAYLIGHT — Headless Autonomous Factory (1 command: daylight run prd.md --agents)</text>
+      <g font-size="12" font-weight="600" fill="#fff" text-anchor="middle">
+        <rect x="28" y="54" width="120" height="44" rx="8" fill="#0a6648"/><text x="88" y="80">Preflight/Triage</text>
+        <rect x="164" y="54" width="120" height="44" rx="8" fill="#0a6648"/><text x="224" y="80">Design + Gate 1</text>
+        <rect x="300" y="54" width="146" height="44" rx="8" fill="#0a6648"/><text x="373" y="80">Plan + Worktrees</text>
+        <rect x="462" y="54" width="150" height="44" rx="8" fill="#0a6648"/><text x="537" y="80">Red-at-Base / Docker</text>
+        <rect x="628" y="54" width="136" height="44" rx="8" fill="#0a6648"/><text x="696" y="80">Trace/Judge/Rev</text>
+        <rect x="780" y="54" width="124" height="44" rx="8" fill="#0a6648"/><text x="842" y="80">PR + Gate 2</text>
+        <rect x="920" y="54" width="192" height="44" rx="8" fill="#074f37"/><text x="1016" y="80">Merge → Deploy → Smoke</text>
+      </g>
+      <text x="28" y="124" font-size="12" fill="#235744">Gates: Agent (0 touchpoints) or Human (2 touchpoints) · State: .daylight/run-state.json + hash-chained audit JSONL · Self-improvement: reflect + dream PR</text>
+
+      <!-- Rig Row -->
+      <rect x="10" y="164" width="1120" height="132" rx="12" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+      <text x="28" y="190" font-size="14" font-weight="700" fill="#1d4ed8">RIG — Interactive Team Governance Harness (Human-gated skills + CI rig-check boundary)</text>
+      <g font-size="12" font-weight="600" fill="#fff" text-anchor="middle">
+        <rect x="28" y="206" width="126" height="44" rx="8" fill="#1d4ed8"/><text x="91" y="232">/rig:chart (Sprint)</text>
+        <rect x="170" y="206" width="126" height="44" rx="8" fill="#1d4ed8"/><text x="233" y="232">/rig:start (Grill)</text>
+        <rect x="312" y="206" width="130" height="44" rx="8" fill="#1d4ed8"/><text x="377" y="232">/rig:plan → Approve</text>
+        <rect x="458" y="206" width="144" height="44" rx="8" fill="#1d4ed8"/><text x="530" y="232">/rig:build (Sensors)</text>
+        <rect x="618" y="206" width="150" height="44" rx="8" fill="#1d4ed8"/><text x="693" y="232">/rig:test (Holdouts)</text>
+        <rect x="784" y="206" width="134" height="44" rx="8" fill="#1d4ed8"/><text x="851" y="232">/rig:pr (AI Review)</text>
+        <rect x="934" y="206" width="178" height="44" rx="8" fill="#1e3a8a"/><text x="1023" y="232">CI rig-check → Merge</text>
+      </g>
+      <text x="28" y="276" font-size="12" fill="#1e40af">Gates: Human-only (/rig:approve, /rig:waive, autonomy rungs 0-3) · State: committed .rig/changes/&lt;slug&gt;/ · Boundary: GitHub CI + branch protection + revert breaker</text>
+    </svg>
+  </div>
+
+  <!-- 3. DETAILED SIDE-BY-SIDE MATRIX -->
+  <h2>3. Deep Side-by-Side Comparison Matrix</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:18%">Dimension</th>
+        <th class="dl-col" style="width:41%">Daylight (eigen_work_v2.0)</th>
+        <th class="rig-col" style="width:41%">Rig (rig_v1)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Primary Goal &amp; Persona</strong></td>
+        <td><strong>Autonomous software factory</strong>: hand a PRD/issue/alert to a headless orchestrator and ship with 0 or 2 human touches.</td>
+        <td><strong>Team AI-SDLC governance harness</strong>: make interactive Claude Code sessions disciplined, auditable, and safe for multi-person teams.</td>
+      </tr>
+      <tr>
+        <td><strong>Execution Mode</strong></td>
+        <td>Headless CLI orchestrator (<code>daylight run</code>) driving <code>claude -p</code> subagents in git worktrees with checkpoint resume.</td>
+        <td>Interactive Claude Code skills (<code>/rig:*</code>) with optional autonomy rungs (0–3); vendored standalone into repos so cloud sessions work out of the box.</td>
+      </tr>
+      <tr>
+        <td><strong>Human Gates &amp; Approval Model</strong></td>
+        <td>Configurable <strong>0 gates</strong> (agent Gate 1 + deterministic/Opus Gate 2) or <strong>2 human gates</strong> (design + PR). High-tier paths require human sign-off unless overridden.</td>
+        <td><strong>Human-only approvals &amp; waivers</strong> (<code>SDLC_HUMAN</code>, <code>disable-model-invocation</code>). Models never self-approve. At rung 3, only tier-0 PRs by trusted authors can auto-pass if the revert breaker holds.</td>
+      </tr>
+      <tr>
+        <td><strong>Spec &amp; Planning</strong></td>
+        <td>Opus authors <code>intent.md</code>, <code>spec.md</code> (with <code>[test]</code>/<code>[run]</code>/<code>[sensor]</code> tags), <code>architecture.md</code>. Fast path skips Opus Gate 1 for small low-tier PRDs.</td>
+        <td>Sprint-level <code>/rig:chart</code> (PRD → intents ≤ 2 eng-days, ADRs, testplan, requirement ledger) + per-change <code>/rig:start</code> (interactive grill) + right-sized light/full plans (no code in plans).</td>
+      </tr>
+      <tr>
+        <td><strong>TDD &amp; Test Verification</strong></td>
+        <td><strong>Red-at-base TDD</strong>: checks out branch's new AC-tagged tests onto base tree (must fail at base, pass at head). Eliminates commit-order brittleness.</td>
+        <td><strong>Red-proof + Mutation-diff + Hidden Holdouts</strong>: red-proof against base, blocking mutation score (default 80% on added lines), and QA black-box holdout tests hidden from the builder by hooks.</td>
+      </tr>
+      <tr>
+        <td><strong>Delivery &amp; Deployment</strong></td>
+        <td><strong>Pre-merge Docker delivery</strong> (<code>verifyDelivery</code>: compose up, health wait, smoke test, compose down) inside the inner loop + post-merge <code>deploy</code> + <code>monitor</code> (health failure → new triage item).</td>
+        <td>Production gate template (managed hook) + CI <code>rig-check</code> / <code>merge_group</code>. Does not orchestrate Docker compose deploy/smoke inside the inner loop.</td>
+      </tr>
+      <tr>
+        <td><strong>Sensors &amp; Quality Floor</strong></td>
+        <td>Fast sensors (tests, tsc, lint, complexity, duplication, layer rules, advisories, secrets) + traceability matrix. Complexity/duplication exclude <code>scripts/</code>.</td>
+        <td>Continuous/commit/CI/nightly cadenced sensors (model-grade aware), <code>knownRed</code> debt baseline for brownfield, test-tamper/weakening detection, size caps, secret scanning.</td>
+      </tr>
+      <tr>
+        <td><strong>Code &amp; Security Review</strong></td>
+        <td>Narrow Opus evaluator (inline rubric) per <code>[test]</code> task + Run Judge + <code>/code-review</code> &amp; <code>/security-review</code> (with local-diff fallback when <code>origin/HEAD</code> is absent) + cited blocking rule.</td>
+        <td>One clean-context Opus reviewer + Opus security agent per change, plus CI <code>ai-review</code>. Review-health audit seeding (<code>sdlc audit seed|reveal</code>) &amp; Q1/Q2/Q3 reviewer comprehension checks.</td>
+      </tr>
+      <tr>
+        <td><strong>Security &amp; Guardrails</strong></td>
+        <td><code>PreToolUse</code> guard hooks block credential reads, pushes to default branch, foreign deploys, and generator edits to protected files/rubrics.</td>
+        <td>Removed brittle Bash hooks in v0.5.0; uses Claude <code>permissions</code> deny/ask rules locally and treats <strong>CI + GitHub branch protection</strong> (reading base-branch checker/config) as the real trust boundary.</td>
+      </tr>
+      <tr>
+        <td><strong>Stack &amp; Language Support</strong></td>
+        <td><strong>TypeScript / Node.js only</strong> (v1 stops at ingest on non-TS repos).</td>
+        <td><strong>8 stack packs</strong>: Node, Python, Java (Maven/Gradle), Go, Rust, .NET, Angular + Windows/macOS/Linux support.</td>
+      </tr>
+      <tr>
+        <td><strong>Brownfield Support</strong></td>
+        <td><code>ingest</code> detects conventions, generates starter wiki, proposes sensor config. Cumulative task ownership + red-at-base TDD.</td>
+        <td>First-class brownfield: <code>/rig:init</code> records <code>knownRed</code> baseline so legacy debt never blocks new work; <code>/rig:start --from-diff</code> wraps exploratory vibe-coding into a governed change.</td>
+      </tr>
+      <tr>
+        <td><strong>Observability &amp; Cost Control</strong></td>
+        <td>Append-only <strong>hash-chained JSONL audit log</strong> (every tool, REPL batch, subagent, sensor, verdict, review cost) + self-contained HTML report.</td>
+        <td>Live journey dashboard (context &amp; dollars), 150k context compact guard, Opus advisor disabled, <code>verify.json</code> stamp caching, <code>sdlc report --github</code> (merges/reverts per tier).</td>
+      </tr>
+      <tr>
+        <td><strong>Self-Improvement &amp; Evals</strong></td>
+        <td><code>reflect</code> extracts categorized lessons from audit logs; scheduled <code>dream</code> job opens allowlisted harness-improvement PRs.</td>
+        <td><code>/rig:learn</code> mines transcripts &amp; reverts into candidate review cases + rules; full <strong>empirical eval &amp; ablation suite</strong> (<code>eval/</code>) measuring cost, time, and pass rates against bare Claude.</td>
+      </tr>
+      <tr>
+        <td><strong>Distribution &amp; State</strong></td>
+        <td>Claude Code plugin (<code>.claude-plugin/</code>) + CLI; runtime state in gitignored <code>.daylight/</code>.</td>
+        <td><strong>Standalone vendoring</strong> (<code>vendor --standalone</code>) commits skills/agents/hooks/bin into the repo; change evidence committed under <code>.rig/</code>.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- 4. AI-NATIVE SDLC PLAYBOOK ALIGNMENT -->
+  <h2>4. Alignment with Anthropic's AI-Native SDLC Playbook</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Playbook Pillar</th>
+        <th class="dl-col">Daylight</th>
+        <th class="rig-col">Rig</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1. Spec &amp; Intent First</strong></td>
+        <td><span class="score hi">Strong</span> — Formal <code>intent.md</code>, <code>spec.md</code> (tagged ACs), <code>architecture.md</code> with ADRs.</td>
+        <td><span class="score hi">Very Strong</span> — Sprint <code>/rig:chart</code> + interactive grill <code>/rig:start</code> + right-sized plans + requirement ledger.</td>
+      </tr>
+      <tr>
+        <td><strong>2. Bounded Context &amp; Subagents</strong></td>
+        <td><span class="score hi">Strong</span> — Fresh minimal context per task retry, worktree isolation, Sonnet gen / Opus eval split.</td>
+        <td><span class="score hi">Very Strong</span> — Evidence-driven (57% cache-read finding), 150k compact guard, ≤60-line briefs, advisor off.</td>
+      </tr>
+      <tr>
+        <td><strong>3. Deterministic Verification</strong></td>
+        <td><span class="score hi">Very Strong</span> — Red-at-base TDD, pre-merge Docker delivery, deterministic Gate 2, traceability matrix.</td>
+        <td><span class="score hi">Very Strong</span> — Mutation-diff (80%), hidden holdout tests, test-tamper checks, CI recomputes from base.</td>
+      </tr>
+      <tr>
+        <td><strong>4. Risk-Tiered Human Governance</strong></td>
+        <td><span class="score hi">Strong</span> — 0-gate or 2-gate modes; path-based risk tiers.</td>
+        <td><span class="score hi">Best-in-Class</span> — Tier 0/1/2, autonomy rungs 0–3, revert breaker, Q1–Q3 reviewer checks, audit seeding.</td>
+      </tr>
+      <tr>
+        <td><strong>5. Continuous Learning &amp; Feedback</strong></td>
+        <td><span class="score hi">Strong</span> — Automated <code>reflect</code> + scheduled <code>dream</code> PRs + deploy monitor → triage loop.</td>
+        <td><span class="score hi">Strong</span> — <code>/rig:learn</code> from reverts/transcripts + review-eval regression scoring + empirical ablation suite.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- 5. WHEN TO USE WHICH + UNIFIED STRATEGY -->
+  <h2>5. Strategic Recommendation: How to Use Both</h2>
+  <div class="grid-3">
+    <div class="card dl">
+      <span class="badge dl">Use Daylight When</span>
+      <h3>Hands-Off Autonomous Delivery</h3>
+      <ul>
+        <li>You want a <strong>0-gate or 2-gate</strong> factory that takes a PRD/issue and delivers a deployed, smoke-tested service.</li>
+        <li>You are running scheduled jobs, alert-driven bug fixes, or rapid greenfield TypeScript services.</li>
+        <li>You want a single hash-chained audit trail and HTML report per run.</li>
+      </ul>
+    </div>
+    <div class="card rig">
+      <span class="badge rig">Use Rig When</span>
+      <h3>Team Daily Driver (Polyglot)</h3>
+      <ul>
+        <li>Your engineering team works interactively in Claude Code across <strong>Java, Python, Go, Rust, .NET, Angular, or Node</strong>.</li>
+        <li>You need <strong>strict enterprise CI governance</strong> (human-only approvals, branch protection, mutation-diff, hidden holdouts, revert breaker).</li>
+        <li>You have large brownfield repos with legacy debt (<code>knownRed</code>).</li>
+      </ul>
+    </div>
+    <div class="card combo">
+      <span class="badge both">Best-of-Both Convergence</span>
+      <h3>Steal From Each Other</h3>
+      <ul>
+        <li><strong>Port from Rig → Daylight:</strong> <code>knownRed</code> brownfield baseline, multi-stack packs, mutation-diff sensor, and CI-enforced base-branch boundary.</li>
+        <li><strong>Port from Daylight → Rig:</strong> Pre-merge Docker <code>verifyDelivery</code> (<code>[run]</code> ACs), headless worktree orchestrator for rung-3 unattended batches, and hash-chained HTML run reports.</li>
+      </ul>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  Generated by comparing <code>eigen_work_v2.0</code> (Daylight, <code>main</code>) and <code>rig_v1</code> (Rig) against the Anthropic AI-Native SDLC Playbook.
+</footer>
+
+</body>
+</html>

@@ -64,7 +64,7 @@ DAYLIGHT_RUN=run1 node plugin/src/cli.ts run prd.md --agents --design-from docs/
 - **Node.js 24 or newer** (the plugin runs TypeScript directly with Node's type stripping; tested on 26).
 - **Claude Code** with the `claude` CLI on your PATH and a logged-in account that can use `claude-sonnet-5-5` and `claude-opus-5-5`.
 - **git**. For real PRs: the **GitHub CLI** (`gh`) logged in. For deploy: **Docker** with compose.
-- Target repos should be **TypeScript** (v1 supports TypeScript only; other languages stop at ingest with "unsupported language").
+- Target repos support **TypeScript**, **Python (3.14)** (`pyproject.toml`, `pytest`, `ruff`, `mypy`/`pyright`, `uv`/`pip`), and **Rust** (`Cargo.toml`, `cargo test`, `cargo clippy`, `cargo check`). Other languages stop at ingest with "unsupported language".
 
 ## Install
 ```bash

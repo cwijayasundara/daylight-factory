@@ -11,7 +11,7 @@ const h = (s: string) => createHash('sha256').update(s).digest('hex').slice(0, 1
 const walk = (d: string): string[] => (existsSync(d) ? readdirSync(d).flatMap((n) => (statSync(join(d, n)).isDirectory() ? walk(join(d, n)) : [join(d, n)])) : []);
 export function modulesOf(cwd: string): Record<string, string[]> {
   const out: Record<string, string[]> = {};
-  for (const f of walk(join(cwd, 'src')).filter((x) => /\.(tsx?|jsx?)$/.test(x) && !x.endsWith('.d.ts'))) {
+  for (const f of walk(join(cwd, 'src')).filter((x) => /\.(tsx?|jsx?|py|rs)$/.test(x) && !x.endsWith('.d.ts'))) {
     const rel = relative(cwd, f), parts = rel.split('/'), name = parts.length > 2 ? parts[1] : 'core';
     (out[name] ??= []).push(rel);
   }
