@@ -125,7 +125,7 @@ export async function runInner(cwd: string, tasks: Task[], cfg: any, opts: Opts 
     for (const t of tasks) if (!status[t.id] && !running.has(t.id) && t.deps.every((d) => status[d] === 'passed')) {
       running.set(t.id, runTask(cwd, t, cfg, { ...opts, tasks }).then((st) => {
         status[t.id] = st;
-        if (opts.integrate && st === 'passed' && git(cwd, ['merge', '--no-edit', 'daylight/' + t.id]).status !== 0) { git(cwd, ['merge', '--abort']); status[t.id] = 'escalated'; }
+        if (opts.integrate && st === 'passed') { git(cwd, ['checkout', '--', '.']); if (git(cwd, ['merge', '--no-edit', 'daylight/' + t.id]).status !== 0) { git(cwd, ['merge', '--abort']); status[t.id] = 'escalated'; } }
         if (opts.failFast !== false && status[t.id] === 'escalated') halted = true;
         opts.onTask?.(t.id, status[t.id]);
         running.delete(t.id);

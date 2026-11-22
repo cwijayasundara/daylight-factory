@@ -30,7 +30,7 @@ export const citedFiles = (citations: string[]): string[] => [...new Set(citatio
 export type FailureClass = 'generator' | 'plan' | 'harness';
 /** Who can act on this failure. Only the generator class is worth another attempt (deep-dive 2, root cause 5). */
 export function classifyFailure(o: { messages: string[]; citations?: string[]; editable: string[]; history?: string[][] }): { cls: FailureClass; reason: string } {
-  if (o.messages.some((m) => /timed out after|returned no usable verdict|changed nothing/.test(m))) return { cls: 'harness', reason: 'tooling failure, not the generator' };
+  if (o.messages.some((m) => /^[\w-]+ timed out after \d+s|returned no usable verdict|changed nothing/.test(m))) return { cls: 'harness', reason: 'tooling failure, not the generator' };
   const files = citedFiles(o.citations ?? []);
   if (files.length && files.every((f) => !isEditable(f, o.editable))) return { cls: 'plan', reason: 'every cited file (' + files.join(', ') + ') is outside what this task may edit: the plan or the AC assignment is wrong' };
   const cur = (o.citations ?? []).join('|'), h = o.history ?? []; // identical findings on three consecutive evaluations: the generator is not converging
