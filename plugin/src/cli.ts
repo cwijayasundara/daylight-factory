@@ -131,7 +131,8 @@ if (cmd === 'config') {
 } else if (cmd === 'trace') {
   const T = await import('./trace.ts'); const { resolveConfig } = await import('./config.ts'); const { readFileSync, writeFileSync, mkdirSync } = await import('node:fs');
   const cfg = resolveConfig(process.cwd(), { config: opt('config') });
-  const cmdline = opt('cmd') ?? (cfg.sensors.commands.tests ?? 'node --test') + (/test-reporter|^npm /.test(cfg.sensors.commands.tests ?? '') ? '' : ' --test-reporter=tap');
+  const baseTest = cfg.sensors.commands.tests ?? 'node --test';
+  const cmdline = opt('cmd') ?? baseTest + (/node\s+--test/.test(baseTest) && !/test-reporter/.test(baseTest) ? ' --test-reporter=tap' : '');
   const { readLines, auditFile } = await import('./lib/events.ts'); const evs = readLines(auditFile(process.cwd())).map((l) => JSON.parse(l));
   const sensors: Record<string, boolean> = {}; for (const e of evs) if (e.kind === 'sensor') sensors[e.name] = !!e.ok; // latest result per sensor
   const rows = T.matrix(readFileSync(opt('spec')!, 'utf8'), T.runTests(process.cwd(), cmdline), { delivery: evs.some((e) => e.kind === 'x_delivery' && e.ok === true), sensors });

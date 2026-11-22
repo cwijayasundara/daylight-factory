@@ -34,10 +34,11 @@ export const isFastPath = (t: { size: string; tier: string }, cfg: { fast_path?:
 export function fastPlan(spec: string, title: string): { tasks: Task[] } {
   const all = [...new Set(acIds(spec))], modes = acModes(spec);
   const runAcs = all.filter((a) => modes.get(a)?.mode === 'run'), otherAcs = all.filter((a) => modes.get(a)?.mode !== 'run');
-  const broad = ['src/', 'tests/', 'scripts/', 'docs/', 'package.json', 'README.md', 'Dockerfile', 'docker-compose.yml', '.dockerignore'];
+  const broad = ['src/', 'tests/', 'scripts/', 'docs/', 'package.json', 'pyproject.toml', 'uv.lock', 'Cargo.toml', 'Cargo.lock', 'README.md', 'Dockerfile', 'docker-compose.yml', '.dockerignore'];
+  const code = ['src/', 'tests/', 'docs/', 'package.json', 'pyproject.toml', 'uv.lock', 'Cargo.toml', 'Cargo.lock', 'README.md'];
   if (runAcs.length && otherAcs.length) return { tasks: [
-    { id: 't1', title, acs: otherAcs, paths: broad, deps: [], size: 'small' },
-    { id: 't2', title: title + ' (delivery)', acs: runAcs, paths: ['Dockerfile', 'docker-compose.yml', '.dockerignore', 'scripts/', 'package.json'], deps: ['t1'], size: 'small' },
+    { id: 't1', title, acs: otherAcs, paths: code, deps: [], size: 'small' },
+    { id: 't2', title: title + ' (delivery)', acs: runAcs, paths: ['Dockerfile', 'docker-compose.yml', '.dockerignore', 'scripts/', 'package.json', 'pyproject.toml', 'uv.lock', 'Cargo.toml', 'Cargo.lock'], deps: ['t1'], size: 'small' },
   ] };
   return { tasks: [{ id: 't1', title, acs: all, paths: broad, deps: [], size: 'small' }] };
 }

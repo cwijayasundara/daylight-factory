@@ -54,7 +54,7 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
     diff = git(wt.path, ['diff', wt.base, 'HEAD']).stdout.slice(0, 20000);
     const computational: string[] = [];
     computational.push(...scopeViolations(git(wt.path, ['diff', '--name-only', git(wt.path, ['merge-base', wt.base, 'HEAD']).stdout.trim() || wt.base, 'HEAD']).stdout.split('\n').filter(Boolean), t, cfg.guard?.protected_paths ?? [], editable));
-    if (!diff.trim()) computational.push('the attempt changed nothing relative to the task start: there is nothing to evaluate (behaviour already present, or the task has no work)');
+    if (mode !== 'run' && !diff.trim()) computational.push('the attempt changed nothing relative to the task start: there is nothing to evaluate (behaviour already present, or the task has no work)');
     if (tdd && diff.trim()) { // TDD by evidence: the new tests must fail on the base tree (commit order is irrelevant)
       const rb = redAtBase(cwd, wt.base, wt.branch, cfg.sensors.commands.tests ?? 'npm test'); append(file, { kind: 'x_red_at_base', phase: 'inner', task: t.id, attempt: n, ok: rb.ok, outcome: rb.kind, msg: rb.msg });
       if (!rb.ok) computational.push(rb.msg);
