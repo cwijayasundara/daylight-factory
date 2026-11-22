@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 680" width="1440" height="680" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#0d6e4f"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#4b9c7e"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1440" height="680" fill="#ffffff"/>
+
+  <!-- TOP BAR: Factory definition (code) -->
+  <rect x="260" y="24" width="1120" height="64" rx="14" fill="#eaf7f2" stroke="#7bc6a8" stroke-width="1.8"/>
+  <text x="292" y="62" font-size="18" font-weight="700" fill="#0b3b2c">Factory definition</text>
+  <text x="462" y="62" font-size="16" fill="#2c6b54">(code)</text>
+
+  <rect x="526" y="38" width="94" height="36" rx="18" fill="#ffffff" stroke="#7bc6a8" stroke-width="1.5"/>
+  <text x="573" y="61" text-anchor="middle" font-size="14" font-weight="600" fill="#0b3b2c">Skills</text>
+
+  <rect x="634" y="38" width="190" height="36" rx="18" fill="#ffffff" stroke="#7bc6a8" stroke-width="1.5"/>
+  <text x="729" y="61" text-anchor="middle" font-size="14" font-weight="600" fill="#0b3b2c">Rules · CLAUDE.md</text>
+
+  <rect x="838" y="38" width="214" height="36" rx="18" fill="#ffffff" stroke="#7bc6a8" stroke-width="1.5"/>
+  <text x="945" y="61" text-anchor="middle" font-size="14" font-weight="600" fill="#0b3b2c">daylight.yaml · Schema</text>
+
+  <rect x="1066" y="38" width="128" height="36" rx="18" fill="#ffffff" stroke="#7bc6a8" stroke-width="1.5"/>
+  <text x="1130" y="61" text-anchor="middle" font-size="14" font-weight="600" fill="#0b3b2c">Hooks · Agents</text>
+
+  <text x="1212" y="61" font-size="14" font-weight="600" fill="#0d6e4f">governs every stage</text>
+
+  <!-- Arrow from Factory definition into orchestrator loop -->
+  <line x1="710" y1="88" x2="710" y2="112" stroke="#0d6e4f" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- LEFT COLUMN: Triggers -->
+  <rect x="30" y="114" width="200" height="404" rx="14" fill="#eaf7f2" stroke="#7bc6a8" stroke-width="1.8"/>
+  <text x="50" y="148" font-size="18" font-weight="700" fill="#0b3b2c">Triggers</text>
+
+  <rect x="46" y="168" width="168" height="58" rx="10" fill="#ffffff" stroke="#7bc6a8" stroke-width="1.5"/>
+  <text x="64" y="194" font-size="15" font-weight="600" fill="#0b3b2c">PRD Markdown</text>
+  <text x="64" y="213" font-size="12" fill="#3a6b58">prd.md + NFRs</text>
+
+  <rect x="46" y="242" width="168" height="58" rx="10" fill="#ffffff" stroke="#7bc6a8" stroke-width="1.5"/>
+  <text x="64" y="268" font-size="15" font-weight="600" fill="#0b3b2c">GitHub Issues</text>
+  <text x="64" y="287" font-size="12" fill="#3a6b58">normalised via gh</text>
+
+  <rect x="46" y="316" width="168" height="58" rx="10" fill="#ffffff" stroke="#7bc6a8" stroke-width="1.5"/>
+  <text x="64" y="342" font-size="15" font-weight="600" fill="#0b3b2c">Schedules</text>
+  <text x="64" y="361" font-size="12" fill="#3a6b58">cron / headless task</text>
+
+  <rect x="46" y="390" width="168" height="58" rx="10" fill="#ffffff" stroke="#7bc6a8" stroke-width="1.5"/>
+  <text x="64" y="416" font-size="15" font-weight="600" fill="#0b3b2c">Alerts &amp; Regressions</text>
+  <text x="64" y="435" font-size="12" fill="#3a6b58">health check failures</text>
+
+  <rect x="46" y="464" width="168" height="38" rx="10" fill="#d9f2e7" stroke="#7bc6a8" stroke-width="1.2"/>
+  <text x="130" y="488" text-anchor="middle" font-size="12" font-weight="600" fill="#0d6e4f">--design-from / --plan-from</text>
+
+  <!-- Connector Triggers -> Orchestrator -->
+  <line x1="230" y1="202" x2="268" y2="202" stroke="#0d6e4f" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- CENTER: Orchestrator Loop -->
+  <rect x="260" y="114" width="900" height="404" rx="14" fill="#eaf7f2" stroke="#7bc6a8" stroke-width="1.8"/>
+  <rect x="260" y="114" width="224" height="32" rx="10" fill="#ffffff" stroke="#7bc6a8" stroke-width="1.5"/>
+  <text x="372" y="135" text-anchor="middle" font-size="13" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-weight="600" fill="#1d5c46">orchestrator loop</text>
+  <text x="502" y="135" font-size="12" fill="#3a6b58">resumable checkpoints (.daylight/run-state.json) · dynamic Promise.race scheduler</text>
+
+  <!-- Stage 1: Preflight & Triage -->
+  <rect x="276" y="168" width="150" height="66" rx="12" fill="#0a6648"/>
+  <text x="351" y="196" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">Preflight &amp;</text>
+  <text x="351" y="216" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">Triage</text>
+  <line x1="426" y1="201" x2="450" y2="201" stroke="#0d6e4f" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Stage 2: Design (Spec) -->
+  <rect x="454" y="168" width="150" height="66" rx="12" fill="#0a6648"/>
+  <text x="529" y="196" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">Ingest &amp;</text>
+  <text x="529" y="216" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">Design (Spec)</text>
+  <line x1="604" y1="201" x2="628" y2="201" stroke="#0d6e4f" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Stage 3: Plan & Inner Loop -->
+  <rect x="632" y="168" width="154" height="66" rx="12" fill="#0a6648"/>
+  <text x="709" y="196" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">Plan &amp;</text>
+  <text x="709" y="216" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">Inner Loop</text>
+  <line x1="786" y1="201" x2="810" y2="201" stroke="#0d6e4f" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Stage 4: Verify & Review -->
+  <rect x="814" y="168" width="150" height="66" rx="12" fill="#0a6648"/>
+  <text x="889" y="196" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">Verify &amp;</text>
+  <text x="889" y="216" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">Review</text>
+  <line x1="964" y1="201" x2="988" y2="201" stroke="#0d6e4f" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Stage 5: Gate 2 -->
+  <rect x="992" y="168" width="150" height="66" rx="12" fill="#0a6648"/>
+  <text x="1067" y="196" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">Gate 2</text>
+  <text x="1067" y="216" text-anchor="middle" font-size="13" font-weight="600" fill="#c7f0df">PR Approval</text>
+
+  <!-- Gate 1 callout under Design -->
+  <line x1="529" y1="234" x2="529" y2="254" stroke="#4b9c7e" stroke-width="1.6"/>
+  <rect x="444" y="254" width="170" height="58" rx="10" fill="#ffffff" stroke="#4b9c7e" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <text x="529" y="277" text-anchor="middle" font-size="13" font-weight="700" fill="#0b3b2c">Gate 1: Approve Spec</text>
+  <text x="529" y="297" text-anchor="middle" font-size="12" fill="#3a6b58">Human or Opus (0-gate)</text>
+
+  <!-- Gate 2 callout under Gate 2 -->
+  <line x1="1067" y1="234" x2="1067" y2="254" stroke="#4b9c7e" stroke-width="1.6"/>
+  <rect x="976" y="254" width="170" height="58" rx="10" fill="#ffffff" stroke="#4b9c7e" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <text x="1061" y="277" text-anchor="middle" font-size="13" font-weight="700" fill="#0b3b2c">Gate 2: Risk-Tiered</text>
+  <text x="1061" y="297" text-anchor="middle" font-size="12" fill="#3a6b58">Deterministic / Opus / Human</text>
+
+  <!-- Detail Card 1: Isolated Execution & TDD -->
+  <rect x="276" y="330" width="424" height="170" rx="12" fill="#ffffff" stroke="#7bc6a8" stroke-width="1.5"/>
+  <text x="296" y="358" font-size="15" font-weight="700" fill="#0b3b2c">Isolated execution &amp; Task Contract</text>
+  <text x="296" y="384" font-size="13" fill="#234f3e">• Git worktree per task (cumulative ownership across deps)</text>
+  <text x="296" y="408" font-size="13" fill="#234f3e">• [test] ACs: Red-at-base TDD (fail at base, pass at head)</text>
+  <text x="296" y="432" font-size="13" fill="#234f3e">• [run] ACs: Pre-merge Docker delivery (up · health · smoke · down)</text>
+  <text x="296" y="456" font-size="13" fill="#234f3e">• Guard hooks: no prod creds, no protected-path edits</text>
+  <text x="296" y="480" font-size="13" fill="#234f3e">• Failure triage (generator | plan | harness) + fail-fast</text>
+
+  <!-- Detail Card 2: Verification & Judges -->
+  <rect x="718" y="330" width="424" height="170" rx="12" fill="#ffffff" stroke="#7bc6a8" stroke-width="1.5"/>
+  <text x="738" y="358" font-size="15" font-weight="700" fill="#0b3b2c">Verification &amp; Multi-Layer Review</text>
+  <text x="738" y="384" font-size="13" fill="#234f3e">• Fast sensors: tests, tsc, lint, complexity, secrets</text>
+  <text x="738" y="408" font-size="13" fill="#234f3e">• Traceability matrix: every AC -> test / delivery / sensor</text>
+  <text x="738" y="432" font-size="13" fill="#234f3e">• Narrow Opus evaluator (inline rubric) + Run Judge</text>
+  <text x="738" y="456" font-size="13" fill="#234f3e">• /code-review + /security-review (cited blocking rule)</text>
+  <text x="738" y="480" font-size="13" fill="#234f3e">• Sonnet 5.5 generates · Opus 5.5 evaluates &amp; approves</text>
+
+  <!-- Connector Orchestrator -> Ship -->
+  <line x1="1142" y1="201" x2="1192" y2="201" stroke="#0d6e4f" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- RIGHT COLUMN: Ship -->
+  <rect x="1196" y="114" width="184" height="404" rx="14" fill="#eaf7f2" stroke="#7bc6a8" stroke-width="1.8"/>
+  <text x="1216" y="148" font-size="18" font-weight="700" fill="#0b3b2c">Ship</text>
+
+  <rect x="1212" y="168" width="152" height="58" rx="10" fill="#ffffff" stroke="#7bc6a8" stroke-width="1.5"/>
+  <text x="1288" y="194" text-anchor="middle" font-size="15" font-weight="600" fill="#0b3b2c">Pull Request</text>
+  <text x="1288" y="213" text-anchor="middle" font-size="12" fill="#3a6b58">evidence + history</text>
+  <line x1="1288" y1="226" x2="1288" y2="246" stroke="#4b9c7e" stroke-width="1.6" stroke-dasharray="4,3" marker-end="url(#arrow-muted)"/>
+
+  <rect x="1212" y="250" width="152" height="58" rx="10" fill="#ffffff" stroke="#7bc6a8" stroke-width="1.5"/>
+  <text x="1288" y="276" text-anchor="middle" font-size="15" font-weight="600" fill="#0b3b2c">Merge &amp; Wiki</text>
+  <text x="1288" y="295" text-anchor="middle" font-size="12" fill="#3a6b58">squash + why-trail</text>
+  <line x1="1288" y1="308" x2="1288" y2="328" stroke="#4b9c7e" stroke-width="1.6" stroke-dasharray="4,3" marker-end="url(#arrow-muted)"/>
+
+  <rect x="1212" y="332" width="152" height="58" rx="10" fill="#ffffff" stroke="#7bc6a8" stroke-width="1.5"/>
+  <text x="1288" y="358" text-anchor="middle" font-size="15" font-weight="600" fill="#0b3b2c">Deploy &amp; Smoke</text>
+  <text x="1288" y="377" text-anchor="middle" font-size="12" fill="#3a6b58">docker compose up</text>
+  <line x1="1288" y1="390" x2="1288" y2="410" stroke="#4b9c7e" stroke-width="1.6" stroke-dasharray="4,3" marker-end="url(#arrow-muted)"/>
+
+  <rect x="1212" y="414" width="152" height="84" rx="10" fill="#ffffff" stroke="#7bc6a8" stroke-width="1.5"/>
+  <text x="1288" y="446" text-anchor="middle" font-size="15" font-weight="600" fill="#0b3b2c">Monitor</text>
+  <text x="1288" y="467" text-anchor="middle" font-size="12" fill="#3a6b58">health · alerts</text>
+  <text x="1288" y="484" text-anchor="middle" font-size="12" fill="#3a6b58">regressions</text>
+
+  <!-- Feedback Loop 1: Monitor -> Triage -->
+  <path d="M 1288 498 L 1288 548 L 351 548 L 351 240" fill="none" stroke="#0d6e4f" stroke-width="1.8" stroke-dasharray="7,5" marker-end="url(#arrow)"/>
+  <rect x="690" y="534" width="230" height="24" rx="6" fill="#ffffff"/>
+  <text x="805" y="551" text-anchor="middle" font-size="13" font-weight="600" fill="#0d6e4f">regressions feed triage</text>
+
+  <!-- BOTTOM BAR: Telemetry & Metrics -->
+  <rect x="260" y="578" width="1120" height="72" rx="14" fill="#eaf7f2" stroke="#7bc6a8" stroke-width="1.8"/>
+  <text x="292" y="619" font-size="18" font-weight="700" fill="#0b3b2c">Telemetry &amp; metrics</text>
+
+  <rect x="498" y="596" width="194" height="36" rx="18" fill="#ffffff" stroke="#7bc6a8" stroke-width="1.5"/>
+  <text x="595" y="619" text-anchor="middle" font-size="13" font-weight="600" fill="#0b3b2c">Hash-chained Audit JSONL</text>
+
+  <rect x="706" y="596" width="124" height="36" rx="18" fill="#ffffff" stroke="#7bc6a8" stroke-width="1.5"/>
+  <text x="768" y="619" text-anchor="middle" font-size="13" font-weight="600" fill="#0b3b2c">Cost per PR</text>
+
+  <rect x="844" y="596" width="120" height="36" rx="18" fill="#ffffff" stroke="#7bc6a8" stroke-width="1.5"/>
+  <text x="904" y="619" text-anchor="middle" font-size="13" font-weight="600" fill="#0b3b2c">Cycle time</text>
+
+  <rect x="978" y="596" width="176" height="36" rx="18" fill="#ffffff" stroke="#7bc6a8" stroke-width="1.5"/>
+  <text x="1066" y="619" text-anchor="middle" font-size="13" font-weight="600" fill="#0b3b2c">Human touches (0 or 2)</text>
+
+  <text x="1172" y="609" font-size="13" font-weight="600" fill="#0d6e4f">reflect + dream job</text>
+  <text x="1172" y="627" font-size="13" font-weight="600" fill="#0d6e4f">PR the factory</text>
+
+  <!-- Feedback Loop 2: Telemetry -> Factory definition -->
+  <path d="M 1380 614 L 1412 614 L 1412 56 L 1386 56" fill="none" stroke="#0d6e4f" stroke-width="1.8" stroke-dasharray="7,5" marker-end="url(#arrow)"/>
+</svg>

@@ -29,30 +29,36 @@ It is deliberately thin. Existing capabilities do the heavy lifting (Claude Code
 
 ## How it works in one picture
 
-```mermaid
-flowchart LR
-  W[Work item: PRD, issue, task file] --> T[Triage: size, risk tier]
-  T --> I{Existing code?}
-  I -- yes --> ING[Ingest: conventions, starter wiki, proposed sensor config]
-  I -- no --> D
-  ING --> D[Design: intent, spec, architecture]
-  D --> G1{{Gate 1: design approval}}
-  G1 -- reject with feedback --> D
-  G1 -- approve --> P[Plan: tasks linked to ACs]
-  P --> L[Inner loop: generator Sonnet, evaluator Opus, in worktrees, TDD]
-  L --> S[Sensors, traceability matrix, scope check, run judge]
-  S --> R[/code-review and /security-review]
-  R --> PR[Pull request with evidence]
-  PR --> G2{{Gate 2: PR approval}}
-  G2 -- reject --> FIX[Fix task with cited findings] --> S
-  G2 -- approve --> M[Merge, wiki update]
-  M --> DEP[Docker compose deploy and smoke tests]
-  DEP --> MON[Monitor: regression becomes a new work item]
-  MON -.-> T
-  DEP --> RF[Reflect] --> DR[Dream: harness improvement PR]
-```
+![Daylight Factory Architecture](docs/factory-architecture.svg)
 
 Models: **Sonnet 5.5 generates, Opus 5.5 evaluates** (and authors the design and approves gates). Opus is used only where judgment decides a gate or a retry.
+
+### Key technical mechanisms
+- **AC verification modes (ADR-024):** Every acceptance criterion in `spec.md` is tagged `[test]` (verified by AC-named tests), `[run]` (verified by building and running Docker + health + smoke), or `[sensor:<name>]` (verified by a named sensor).
+- **Red-at-base TDD (`plugin/src/tdd.ts`):** For `[test]` tasks, the harness checks out the branch's new AC-tagged tests onto the base tree and requires them to fail at base and pass at head — no brittle commit-order rules or waivers.
+- **Pre-merge delivery verification (`plugin/src/delivery.ts`):** All `[run]` ACs live in one final delivery task verified by `docker compose up --build` → health check → smoke command → `docker compose down`, with **zero LLM evaluator calls**.
+- **Shared task contract & dynamic scheduler (`plugin/src/contract.ts`, `plugin/src/loop.ts`):** Each task runs in its own git worktree with cumulative ownership of its dependencies' paths and always-allowed test files. Tasks launch as soon as their dependencies pass (`Promise.race`), with fail-fast failure triage (`generator | plan | harness`).
+- **Deterministic Gate 2 + Reviews (`plugin/src/gate2.ts`, `plugin/src/review.ts`):** Gate 2 is deterministic over the traceability matrix, sensors, scope, run judge, and `/code-review` + `/security-review` (local-diff fallback when `origin/HEAD` is absent). High-tier changes additionally consult Opus/human approval.
+- **Resumable checkpoints & frozen runs (ADR-020):** Runs checkpoint to `.daylight/run-state.json` (`--resume`) and support `--design-from <dir>` / `--plan-from <file>` / `--stop-after <phase>`.
+
+### Running the factory (0-gate vs 2-gate)
+
+Always run from a **fresh throwaway branch** at your baseline commit (squash-merges advance the base branch; preflight refuses a base that already contains the feature).
+
+```bash
+# 0-gate (fully unattended: agent Gate 1 + deterministic/agent Gate 2)
+# Set gates.pr.human_after_agent: false and tiers.use_defaults: false in daylight.yaml for 0 touchpoints
+DAYLIGHT_RUN=run1 node plugin/src/cli.ts run prd.md --agents --summary-out summary.json
+
+# 2-human-gate (human approves Gate 1 design and Gate 2 PR)
+DAYLIGHT_RUN=run1 node plugin/src/cli.ts run prd.md --summary-out summary.json
+
+# Resume an interrupted or escalated run from its last checkpoint
+DAYLIGHT_RUN=run1 node plugin/src/cli.ts run prd.md --agents --resume --summary-out summary.json
+
+# Frozen-plan run (skip design/plan model calls; test the inner loop cheaply)
+DAYLIGHT_RUN=run1 node plugin/src/cli.ts run prd.md --agents --design-from docs/design --plan-from .daylight/plan.json --stop-after inner
+```
 
 ## Requirements
 - **Node.js 24 or newer** (the plugin runs TypeScript directly with Node's type stripping; tested on 26).
