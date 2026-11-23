@@ -17,7 +17,7 @@ export async function initRepo(cwd: string, cfg: any, o: { stack?: string; gates
   const created: string[] = [];
   if (!existsSync(join(cwd, '.git'))) { git(cwd, ['init', '-q', '-b', 'main']); created.push('.git (main)'); }
   const gi = join(cwd, '.gitignore');
-  if (!existsSync(gi) || !readFileSync(gi, 'utf8').includes('.daylight/')) { appendFileSync(gi, '\n.daylight/\n'); created.push('.gitignore'); }
+  if (!existsSync(gi) || !readFileSync(gi, 'utf8').includes('.daylight/')) { appendFileSync(gi, '\n# daylight\n.daylight/\n.DS_Store\n.idea/\nnode_modules/\n__pycache__/\n.venv/\ntarget/\n'); created.push('.gitignore'); }
   const fdir = join(cwd, '.daylight/factory');
   mkdirSync(fdir, { recursive: true });
   for (const d of ['skills', 'rules', 'config']) cpSync(join(PLUGIN, d), join(fdir, d), { recursive: true });

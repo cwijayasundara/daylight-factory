@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 export interface DEvent { id: string; ts: string; run: string; kind: string; sha_prev: string; [k: string]: unknown }
 const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 
-export const runId = () => process.env.DAYLIGHT_RUN || 'adhoc-' + new Date().toISOString().slice(0, 10);
+export const runId = () => (process.env.DAYLIGHT_RUN || 'adhoc-' + new Date().toISOString().slice(0, 10)).replace(/["'\s]/g, '');
 // DAYLIGHT_AUDIT_ROOT lets hooks fired inside task worktrees write to the run's main log
 export const auditFile = (cwd: string, run = runId()) => join(process.env.DAYLIGHT_AUDIT_ROOT || cwd, '.daylight', 'audit', run + '.jsonl');
 

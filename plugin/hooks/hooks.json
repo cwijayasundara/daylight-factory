@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hook.ts"
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}\"/src/hook.ts"
           }
         ]
       },
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/guard.ts"
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}\"/src/guard.ts"
           }
         ]
       }
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hook.ts"
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}\"/src/hook.ts"
           }
         ]
       }
@@ -37,7 +37,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hook.ts"
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}\"/src/hook.ts"
           }
         ]
       }
@@ -48,7 +48,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hook.ts"
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}\"/src/hook.ts"
           }
         ]
       }
@@ -59,7 +59,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hook.ts"
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}\"/src/hook.ts"
           }
         ]
       }
@@ -89,7 +89,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/notice.ts"
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}\"/src/notice.ts"
           }
         ]
       }

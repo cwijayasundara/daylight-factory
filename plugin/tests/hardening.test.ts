@@ -116,6 +116,18 @@ test('daylight init: scaffolds .daylight/factory, daylight.yaml, prd.md, and pas
   assert.ok(existsSync(join(dir, 'daylight.yaml')));
   assert.ok(existsSync(join(dir, 'prd.md')));
   assert.equal(cli(['config', '--check'], { cwd: dir }).code, 0);
+  const gi = readFileSync(join(dir, '.gitignore'), 'utf8');
+  for (const ig of ['.daylight/', '.DS_Store', '.idea/', '__pycache__/', '.venv/', 'node_modules/']) assert.ok(gi.includes(ig), 'gitignore missing ' + ig);
+});
+
+test('runId: strips quotes and whitespace from DAYLIGHT_RUN so branch/audit names stay clean', async () => {
+  const { runId } = await import('../src/lib/events.ts');
+  const prev = process.env.DAYLIGHT_RUN;
+  process.env.DAYLIGHT_RUN = "'adhoc-2026-11-23'";
+  assert.equal(runId(), 'adhoc-2026-11-23');
+  process.env.DAYLIGHT_RUN = 'r 1 "x"';
+  assert.equal(runId(), 'r1x');
+  if (prev === undefined) delete process.env.DAYLIGHT_RUN; else process.env.DAYLIGHT_RUN = prev;
 });
 
 test('vibe mode: mode on/off/status + Stop-hook sensor blocking with feedback', () => {

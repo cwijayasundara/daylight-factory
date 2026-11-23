@@ -13,7 +13,7 @@ test('AC-1 plugin.json passes claude plugin validate and declared parts exist', 
   assert.equal(m.name, 'daylight');
   const hooks = JSON.parse(readFileSync(join(PLUGIN, 'hooks/hooks.json'), 'utf8'));
   for (const groups of Object.values<any[]>(hooks.hooks)) for (const g of groups) for (const h of g.hooks) {
-    const rel = String(h.command).replace('${CLAUDE_PLUGIN_ROOT}/', '').split(' ').pop()!;
+    const rel = String(h.command).replace(/"/g, '').replace('${CLAUDE_PLUGIN_ROOT}/', '').split(' ').pop()!;
     assert.ok(existsSync(join(PLUGIN, rel)), 'hook script missing: ' + rel);
   }
   assert.ok(readdirSync(join(PLUGIN, 'commands')).includes('run.md'));
