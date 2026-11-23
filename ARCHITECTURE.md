@@ -9,6 +9,17 @@ How Daylight is designed and built. For usage see [README.md](README.md); for th
 4. **Every phase works headless.** Code Mode is an interactive optimisation only; state lives in files, not in the session.
 5. **Judges are out of reach of what they judge.** Config, rubrics and deny-lists come from the base branch; the generator cannot edit them.
 
+### 1.1 Why Daylight is a Lights-On Factory
+In contrast to a *dark factory* (a black box that generates and ships code with no visibility or steering), Daylight is a **lights-on software factory**: autonomy is bounded by visible specs, deterministic evidence, independent cited evaluation, a tamper-evident audit trail, and explicit human decision points.
+
+| Lights-on pillar | Concrete mechanism in Daylight |
+|---|---|
+| **Human gates by default, autonomous by choice** | Defaults to **2 human gates** — Gate 1 (Design: `intent.md`, `spec.md`, `architecture.md`) and Gate 2 (PR: reviewed diff + traceability matrix). Even in 0-gate (`--agents`) or `/daylight:goal` mode, hitting a retry cap or plan/harness failure escalates loudly to `.daylight/escalations/<task>.md` with cited `file:line` evidence (and seeds `--resume` with those findings). |
+| **Full observability** | Every tool call, subagent dispatch, model, token count, cost, sensor result, verdict, and gate decision is written to a **SHA-256 hash-chained audit ledger** (`.daylight/audit/<run>.jsonl`, verified via `daylight ledger --check`) and rendered into `summary.json` + an offline HTML report. |
+| **Deterministic evidence overrides LLM opinion** | Every AC is traced to a passing test (`trace`) and proven **red-at-base** (`tdd.ts`). Deterministic sensors (`pytest` / `npm test` / `cargo test`, complexity, duplication, secrets, layers) can never be overridden by an evaluator LLM (ADR-002). Delivery is proven by actually running Docker + smoke tests (`delivery.ts`), not by an LLM reading a `Dockerfile`. |
+| **Separation of powers & hard guardrails** | Generator (Sonnet) ≠ Evaluator (Opus) ≠ Run Judge (Opus); uncited fails are rejected as inconclusive. `PreToolUse` hooks (`guard.ts`) block the generator from editing rubrics/specs/config, block pushes to `main`, block real deploys, and deny credential paths. |
+| **Lights stay on outside factory runs** | Each run updates `docs/wiki/` (the "why-trail") and records machine-readable lessons (`reflect.ts`). **`/daylight:mode on`** (vibe mode) keeps `rules/guides.md` injected on every prompt (`notice.ts`) and fast sensors blocking on every session stop (`vibe.ts`) during interactive coding. **`/daylight:init`** scaffolds any TypeScript, Python 3.14, or Rust repo in one command. |
+
 ## 2. System context
 
 ```mermaid
