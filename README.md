@@ -33,7 +33,12 @@ Inside Claude Code, run:
 
 This initializes git if needed, copies factory artefacts (`skills/`, `rules/`, `config/`) to `.daylight/factory/`, creates `daylight.yaml` (or runs `ingest` on brownfield repos), and writes a starter `prd.md`.
 
-### 4. Edit `prd.md`, commit the baseline, and run the factory
+### 4. Create or brainstorm `prd.md`, commit the baseline, and run the factory
+If you don't have a PRD yet, brainstorm one interactively with Claude Code (validates via `daylight prd check` automatically):
+```text
+/daylight:brainstorm "describe your idea or point to docs/"
+```
+Then commit the baseline and run the factory:
 ```bash
 git add -A && git commit -m "initial baseline"
 ```
@@ -49,6 +54,7 @@ Then inside Claude Code:
 | Command | Purpose |
 |---|---|
 | `/daylight:init [--stack ts\|python\|rust] [--gates 0\|2]` | Scaffold the factory into the target repo (`.daylight/factory/`, `daylight.yaml`, starter `prd.md`) |
+| `/daylight:brainstorm [topic \| docs/file] [--out prd.md]` | Phase 0: interactively brainstorm a feature/app and write a triage-validated `prd.md` |
 | `/daylight:run <prd.md> [--agents] [--resume]` | Run the full factory; self-drives gates, resumes after timeouts/escalations |
 | `/daylight:goal <prd.md> [--agents] [--max-resumes 3]` | Supervised auto-resume loop across inner-loop escalations (seeded with prior evaluator findings) until `done` or a human gate |
 | `/daylight:mode on\|off\|status` | Vibe mode: guides + sensors enforced on every edit, not just factory runs |
