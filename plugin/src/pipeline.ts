@@ -125,7 +125,7 @@ export async function runPipeline(cwd: string, arg: string, cfg: any, o: { base:
   mark('plan'); { const s = stopIf('plan'); if (s) return s; }
   const tasks = loadPlan(join(cwd, '.daylight/plan.json'));
 
-  const status = rs.phases.inner ? Object.fromEntries(tasks.map((t) => [t.id, 'passed'])) : await ph('inner', () => runInner(cwd, tasks, cfg, { spec: join(dir, 'spec.md'), integrate: true, done: Object.keys(rs.tasks).filter((id) => rs.tasks[id] === 'passed'), onTask: (id: string, s: string) => { rs.tasks[id] = s; save(); }, sensors: async (wt) => { const r = runFast(wt, cfg); return { ok: r.ok, messages: r.results.flatMap((x) => x.messages).join('\n') }; } }));
+  const status = rs.phases.inner ? Object.fromEntries(tasks.map((t) => [t.id, 'passed'])) : await ph('inner', () => runInner(cwd, tasks, cfg, { spec: join(dir, 'spec.md'), integrate: true, resume: o.resume, done: Object.keys(rs.tasks).filter((id) => rs.tasks[id] === 'passed'), onTask: (id: string, s: string) => { rs.tasks[id] = s; save(); }, sensors: async (wt) => { const r = runFast(wt, cfg); return { ok: r.ok, messages: r.results.flatMap((x) => x.messages).join('\n') }; } }));
   if (Object.values(status).some((s) => s !== 'passed')) return stop('inner', 'tasks not passed: ' + JSON.stringify(status));
   mark('inner'); { const s = stopIf('inner'); if (s) return s; }
 

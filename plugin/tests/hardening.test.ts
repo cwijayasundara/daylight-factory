@@ -120,6 +120,20 @@ test('daylight init: scaffolds .daylight/factory, daylight.yaml, prd.md, and pas
   for (const ig of ['.daylight/', '.DS_Store', '.idea/', '__pycache__/', '.venv/', 'node_modules/']) assert.ok(gi.includes(ig), 'gitignore missing ' + ig);
 });
 
+import { runId } from '../src/lib/events.ts';
+import { seedEscalation, clearEscalation } from '../src/loop.ts';
+
+test('escalation seeding: a resumed task is seeded with prior evaluator findings, cleared on pass', () => {
+  const dir = tmp();
+  assert.equal(seedEscalation(dir, 't2'), '');
+  mkdirSync(join(dir, '.daylight/escalations'), { recursive: true });
+  writeFileSync(join(dir, '.daylight/escalations/t2.md'), '# Escalation: task t2\n\nFailure class: generator (retry cap reached).\n\n## Last cited feedback\n- lookup.py:88 keeps weaker sender-only matches\n\n## Branch\ndaylight/t2\n');
+  assert.match(seedEscalation(dir, 't2'), /sender-only matches/);
+  assert.doesNotMatch(seedEscalation(dir, 't2'), /## Branch/);
+  clearEscalation(dir, 't2');
+  assert.equal(seedEscalation(dir, 't2'), '');
+});
+
 test('runId: strips quotes and whitespace from DAYLIGHT_RUN so branch/audit names stay clean', async () => {
   const { runId } = await import('../src/lib/events.ts');
   const prev = process.env.DAYLIGHT_RUN;

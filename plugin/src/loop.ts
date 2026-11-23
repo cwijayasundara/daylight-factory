@@ -1,6 +1,6 @@
 // Reuses: claude -p subagents (--agent daylight:generator|evaluator), git worktrees, Superpowers SDD loop shape. Glue: retry cap, fresh context, escalation, parallel scheduling.
 import { spawn } from 'node:child_process';
-import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync, readFileSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { git, addWorktree } from './worktree.ts';
@@ -16,7 +16,15 @@ import { tddInstruction, generatorContract, evaluatorPrompt } from './context.ts
 
 const PLUGIN = join(dirname(fileURLToPath(import.meta.url)), '..');
 export interface Sensor { ok: boolean; messages: string }
-export interface Opts { done?: string[]; onTask?: (id: string, status: string) => void; integrate?: boolean; sensors?: (wt: string, t: Task) => Promise<Sensor>; evaluatorExtra?: (wt: string, t: Task) => Promise<string>; spec?: string; tasks?: Task[]; failFast?: boolean }
+export interface Opts { done?: string[]; onTask?: (id: string, status: string) => void; integrate?: boolean; sensors?: (wt: string, t: Task) => Promise<Sensor>; evaluatorExtra?: (wt: string, t: Task) => Promise<string>; spec?: string; tasks?: Task[]; failFast?: boolean; resume?: boolean }
+
+/** A resumed attempt must not repeat known failures: seed it with the escalation's cited feedback. */
+export const seedEscalation = (cwd: string, id: string): string => {
+  const f = join(cwd, '.daylight/escalations', id + '.md');
+  if (!existsSync(f)) return '';
+  return readFileSync(f, 'utf8').split('## Last cited feedback')[1]?.split('## Branch')[0]?.trim() ?? '';
+};
+export const clearEscalation = (cwd: string, id: string) => rmSync(join(cwd, '.daylight/escalations', id + '.md'), { force: true });
 
 export const claude = (args: string[], cwd: string, env: Record<string, string> = {}) => new Promise<{ code: number; stdout: string; stderr: string }>((res) => {
   const e = { ...process.env, ...env };
@@ -36,6 +44,7 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
   const specText = opts.spec && existsSync(opts.spec) ? readFileSync(opts.spec, 'utf8') : '', mode = taskMode(t, acModes(specText)), tdd = mode === 'tdd';
   if (!tdd) append(file, { kind: 'x_tdd_waiver', phase: 'inner', task: t.id, reason: mode === 'run' ? 'delivery task: proven by running it, not by a unit test' : 'no behaviour ACs to test first' });
   let feedback = '', diff = '', prevComp: string[] | undefined, citeHistory: string[][] = [], fail: { cls: string; reason: string } = { cls: 'generator', reason: 'retry cap reached' };
+  if (opts.resume) { const seed = seedEscalation(cwd, t.id); if (seed) { feedback = seed; append(file, { kind: 'x_escalation_context', phase: 'inner', task: t.id, msg: 'resumed after escalation: attempt 1 is seeded with the prior evaluator findings' }); } }
   const editable = editablePaths(t, opts.tasks ?? [t]);
   const rubric = readFileSync(join(PLUGIN, 'skills/evaluator-rubric/SKILL.md'), 'utf8').replace(/^---[\s\S]*?---\s*/, '');
   const rd = (p: string) => (existsSync(p) ? readFileSync(p, 'utf8') : '');
@@ -44,7 +53,7 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
   for (let n = 1; n <= attempts; n++) {
     const effort = effortFor(t, n, cfg);
     const prompt = 'Task ' + t.id + ': ' + t.title + '\nAcceptance criteria: ' + t.acs.join(', ') + '\n' + generatorContract(t, opts.tasks ?? [t]) + '\n\n' + ctx + '\n' +
-      tddInstruction(t, join(PLUGIN, 'src/cli.ts'), cfg.sensors.commands.tests ?? 'npm test', mode) + (t.feedback ? '\n\n## Review findings to fix\n' + t.feedback : '') + (n > 1 ? '\n\n## Diff so far\n' + diff + '\n\n## Cited feedback to fix\n' + feedback : '');
+      tddInstruction(t, join(PLUGIN, 'src/cli.ts'), cfg.sensors.commands.tests ?? 'npm test', mode) + (t.feedback ? '\n\n## Review findings to fix\n' + t.feedback : '') + (n > 1 ? '\n\n## Diff so far\n' + diff : '') + (n > 1 || feedback ? '\n\n## Cited feedback to fix\n' + feedback : '');
     append(file, { kind: 'x_context', phase: 'inner', task: t.id, attempt: n, role: 'generator', tokens: Math.ceil(prompt.length / 4), chars: prompt.length, budget: cfg.context.budget_tokens, over_budget: Math.ceil(prompt.length / 4) > cfg.context.budget_tokens });
     append(file, { kind: 'x_dispatch', phase: 'inner', task: t.id, attempt: n, role: 'generator', model: cfg.models.generator, effort });
     const g = await claude(['-p', prompt, '--agent', 'daylight:generator', '--model', cfg.models.generator, '--effort', effort, '--plugin-dir', PLUGIN, '--output-format', 'json', '--allowedTools', 'Read,Write,Edit,Bash,Grep,Glob'], wt.path, { DAYLIGHT_ROLE: 'generator', DAYLIGHT_RUN: process.env.DAYLIGHT_RUN ?? '', DAYLIGHT_AUDIT_ROOT: cwd });
@@ -63,7 +72,7 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
     if (mode === 'run' && !computational.length) { // a delivery is proven by running it: build, health, smoke (no LLM can judge that)
       const dv = await verifyDelivery(wt.path, cfg); append(file, { kind: 'x_delivery', phase: 'inner', task: t.id, attempt: n, ok: dv.ok, msg: dv.msg.slice(0, 300) });
       if (!dv.ok) computational.push('delivery check failed: ' + dv.msg);
-      else { append(file, { kind: 'verdict', phase: 'inner', role: 'harness', task: t.id, attempt: n, verdict: 'pass', evaluator_verdict: 'skipped', computational: [] }); append(file, { kind: 'x_task_end', phase: 'inner', task: t.id, status: 'passed', attempts: n }); return 'passed'; }
+      else { clearEscalation(cwd, t.id); append(file, { kind: 'verdict', phase: 'inner', role: 'harness', task: t.id, attempt: n, verdict: 'pass', evaluator_verdict: 'skipped', computational: [] }); append(file, { kind: 'x_task_end', phase: 'inner', task: t.id, status: 'passed', attempts: n }); return 'passed'; }
     }
     if (computational.length) { // contract failed: the verdict is already fail (ADR-002), so skip the paid evaluator and feed the messages back
       append(file, { kind: 'verdict', phase: 'inner', role: 'harness', task: t.id, attempt: n, verdict: 'fail', evaluator_verdict: 'skipped', computational });
@@ -103,7 +112,7 @@ export async function runTask(cwd: string, t: Task, cfg: any, opts: Opts = {}): 
     }
     const effective = computational.length ? 'fail' : v.effective; // ADR-002: computational failures are never overridden
     append(file, { kind: 'verdict', phase: 'inner', role: 'evaluator', task: t.id, attempt: n, verdict: effective, evaluator_verdict: v.effective, model: evalModel, degraded, citations: v.citations ?? [], computational });
-    if (effective !== 'fail') { append(file, { kind: 'x_task_end', phase: 'inner', task: t.id, status: 'passed', attempts: n }); return 'passed'; }
+    if (effective !== 'fail') { clearEscalation(cwd, t.id); append(file, { kind: 'x_task_end', phase: 'inner', task: t.id, status: 'passed', attempts: n }); return 'passed'; }
     const vc = classifyFailure({ messages: v.harness ? [String(v.feedback)] : [], citations: v.citations ?? [], editable, history: citeHistory }); citeHistory.push(v.citations ?? []);
     if (vc.cls !== 'generator') { fail = vc; feedback = (v.criteria ?? []).filter((c: any) => c.result === 'fail').map((c: any) => '- ' + c.cite + ': ' + (c.id ?? '')).join('\n') + '\n' + (v.feedback ?? ''); break; }
     feedback = [...computational, ...(v.criteria ?? []).filter((c: any) => c.result === 'fail').map((c: any) => '- ' + c.cite + ': ' + (c.id ?? '')), v.feedback ?? ''].join('\n');
