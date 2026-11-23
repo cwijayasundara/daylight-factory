@@ -67,18 +67,26 @@ DAYLIGHT_RUN=run1 node plugin/src/cli.ts run prd.md --agents --design-from docs/
 - Target repos support **TypeScript**, **Python (3.14)** (`pyproject.toml`, `pytest`, `ruff`, `mypy`/`pyright`, `uv`/`pip`), and **Rust** (`Cargo.toml`, `cargo test`, `cargo clippy`, `cargo check`). Other languages stop at ingest with "unsupported language".
 
 ## Install
+
+### Local plugin (recommended — no marketplace required)
 ```bash
 git clone https://github.com/cwijayasundara/daylight-factory.git
 cd daylight-factory/plugin && npm ci          # ajv, yaml, typescript (types only)
-cd ..
 
-# register the local marketplace and install the plugin (user or project scope)
+# load directly into Claude Code without registering a marketplace
+claude --plugin-dir "$(pwd)"
+
+# optional: add an alias + CLI to ~/.zshrc
+alias claude-daylight="claude --plugin-dir '$(pwd)'"
+export PATH="$(pwd)/bin:$PATH"
+daylight doctor
+```
+
+### Optional: local marketplace install
+```bash
+cd ..
 claude plugin marketplace add "$(pwd)"
 claude plugin install daylight@daylight-local --scope project
-
-# put the CLI on your PATH (optional) and check your setup
-export PATH="$(pwd)/plugin/bin:$PATH"
-daylight doctor
 ```
 Inside Claude Code you can then run `/daylight:run --help`. Without installing, run the CLI directly: `node plugin/src/cli.ts <command>` (same thing as `daylight <command>`).
 
