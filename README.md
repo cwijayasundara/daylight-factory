@@ -43,6 +43,19 @@ Then inside Claude Code:
 ```
 *(Omit `--agents` for 2-human-gate mode.)*
 
+`/daylight:run` drives **all phases itself** — triage → design → Gate 1 → plan → TDD inner loop (generator + evaluator) → sensors → judge → PR → Gate 2 → deploy → smoke → wiki — and knows how to handle every exit: it presents design/PR artefacts for your decision at human gates (`daylight gate decide ...`), auto-resumes with `--resume` after tool timeouts, and reads `.daylight/escalations/` on failures instead of improvising the phases.
+
+## Command Reference
+| Command | Purpose |
+|---|---|
+| `/daylight:init [--stack ts\|python\|rust] [--gates 0\|2]` | Scaffold the factory into the target repo (`.daylight/factory/`, `daylight.yaml`, starter `prd.md`) |
+| `/daylight:run <prd.md> [--agents] [--resume]` | Run the full factory; self-drives gates, resumes after timeouts/escalations |
+| `/daylight:mode on\|off\|status` | Vibe mode: guides + sensors enforced on every edit, not just factory runs |
+| `daylight doctor` | Verify your environment (node, claude, docker, git) |
+| `daylight config --resolved` | Show the merged `daylight.yaml` configuration |
+| `daylight gate present \| decide` | Inspect/approve a human gate (design or PR) |
+| `daylight ledger --check` | Verify the hash-chained audit log |
+
 ## Vibe Mode: the harness on every edit
 Run `/daylight:mode on` (or `daylight mode on`) to keep the factory enforcing even when you vibe-code outside `/daylight:run`:
 - **Guidelines** from `rules/guides.md` (TDD, SOLID, SRP) are injected into every prompt.
