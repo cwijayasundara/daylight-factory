@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync, readFileSync, chmodSync } from 'node:fs';
 import { join } from 'node:path';
-import { tmp, cli } from './helpers.ts';
+import { tmp, cli, put, MIN_YAML, PLUGIN } from './helpers.ts';
 import { existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { addWorktree, git } from '../src/worktree.ts';
 import { runFast } from '../src/sensors.ts';
 import { capture } from '../src/review.ts';
@@ -115,4 +116,22 @@ test('daylight init: scaffolds .daylight/factory, daylight.yaml, prd.md, and pas
   assert.ok(existsSync(join(dir, 'daylight.yaml')));
   assert.ok(existsSync(join(dir, 'prd.md')));
   assert.equal(cli(['config', '--check'], { cwd: dir }).code, 0);
+});
+
+test('vibe mode: mode on/off/status + Stop-hook sensor blocking with feedback', () => {
+  const dir = tmp();
+  put(dir, 'daylight.yaml', MIN_YAML);
+  assert.equal(JSON.parse(cli(['mode', 'status'], { cwd: dir }).out).enabled, false);
+  const on = JSON.parse(cli(['mode', 'on'], { cwd: dir }).out);
+  assert.equal(on.enabled, true);
+  assert.deepEqual(on.sensors, ['secrets', 'complexity', 'duplication']);
+  put(dir, 'src/bad.ts', 'const AWS_KEY = "AKIAIOSFODNN7EXAMPLE";\n');
+  const run = () => spawnSync('node', [join(PLUGIN, 'src/vibe.ts')], { cwd: dir, input: JSON.stringify({ cwd: dir }), encoding: 'utf8' });
+  const blocked = JSON.parse(run().stdout);
+  assert.equal(blocked.decision, 'block');
+  assert.match(blocked.reason, /secret pattern/);
+  put(dir, 'src/bad.ts', 'export const add = (a: number, b: number) => a + b;\n');
+  assert.equal(run().stdout.trim(), '');
+  cli(['mode', 'off'], { cwd: dir });
+  assert.equal(run().stdout.trim(), '');
 });

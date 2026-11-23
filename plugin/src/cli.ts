@@ -192,6 +192,11 @@ if (cmd === 'config') {
   const { definitionDiff } = await import('./definition.ts'); console.log(definitionDiff(process.cwd(), rest[1], rest[2]));
 } else if (cmd === 'benchmark' && rest[0] === 'compare') {
   const B = await import('./benchmark.ts'); console.log(B.compare(B.fromTranscript(opt('on')!, opt('start')!, opt('end')!), B.fromP(opt('off')!)));
+} else if (cmd === 'mode') {
+  const { setMode, readMode, modeOn } = await import('./mode.ts');
+  const cwd = process.cwd();
+  if (rest[0] === 'on' || rest[0] === 'off') console.log(JSON.stringify(setMode(cwd, rest[0] === 'on', opt('sensors')?.split(',')), null, 2));
+  else console.log(JSON.stringify({ enabled: modeOn(cwd), ...(readMode(cwd) ?? {}) }, null, 2));
 } else if (cmd === 'init') {
   const { initRepo } = await import('./init.ts'); const { resolveConfig } = await import('./config.ts');
   const cfg = resolveConfig(process.cwd(), { config: opt('config') });

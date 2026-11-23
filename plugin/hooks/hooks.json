@@ -70,7 +70,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/src/hook.ts"
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}\"/src/hook.ts"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}\"/src/vibe.ts"
           }
         ]
       }
