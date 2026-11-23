@@ -41,7 +41,7 @@ Then inside Claude Code:
 ```text
 /daylight:run prd.md --agents
 ```
-*(Omit `--agents` for 2-human-gate mode.)*
+*(Omit `--agents` for 2-human-gate mode. For supervised auto-resume across inner-loop escalations until done, use `/daylight:goal prd.md --agents`.)*
 
 `/daylight:run` drives **all phases itself** — triage → design → Gate 1 → plan → TDD inner loop (generator + evaluator) → sensors → judge → PR → Gate 2 → deploy → smoke → wiki — and knows how to handle every exit: it presents design/PR artefacts for your decision at human gates (`daylight gate decide ...`), auto-resumes with `--resume` after tool timeouts, and reads `.daylight/escalations/` on failures instead of improvising the phases.
 
@@ -50,6 +50,7 @@ Then inside Claude Code:
 |---|---|
 | `/daylight:init [--stack ts\|python\|rust] [--gates 0\|2]` | Scaffold the factory into the target repo (`.daylight/factory/`, `daylight.yaml`, starter `prd.md`) |
 | `/daylight:run <prd.md> [--agents] [--resume]` | Run the full factory; self-drives gates, resumes after timeouts/escalations |
+| `/daylight:goal <prd.md> [--agents] [--max-resumes 3]` | Supervised auto-resume loop across inner-loop escalations (seeded with prior evaluator findings) until `done` or a human gate |
 | `/daylight:mode on\|off\|status` | Vibe mode: guides + sensors enforced on every edit, not just factory runs |
 | `daylight doctor` | Verify your environment (node, claude, docker, git) |
 | `daylight config --resolved` | Show the merged `daylight.yaml` configuration |
