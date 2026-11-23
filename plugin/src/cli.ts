@@ -192,6 +192,10 @@ if (cmd === 'config') {
   const { definitionDiff } = await import('./definition.ts'); console.log(definitionDiff(process.cwd(), rest[1], rest[2]));
 } else if (cmd === 'benchmark' && rest[0] === 'compare') {
   const B = await import('./benchmark.ts'); console.log(B.compare(B.fromTranscript(opt('on')!, opt('start')!, opt('end')!), B.fromP(opt('off')!)));
+} else if (cmd === 'init') {
+  const { initRepo } = await import('./init.ts'); const { resolveConfig } = await import('./config.ts');
+  const cfg = resolveConfig(process.cwd(), { config: opt('config') });
+  console.log(JSON.stringify(await initRepo(process.cwd(), cfg, { stack: opt('stack'), gates: opt('gates') }), null, 2));
 } else if (cmd === 'run') {
   const { runPipeline, summarize } = await import('./pipeline.ts'); const { resolveConfig } = await import('./config.ts'); const { auditFile, runId } = await import('./lib/events.ts'); const { writeFileSync } = await import('node:fs');
   const cfg = resolveConfig(process.cwd(), { config: opt('config') });

@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync, readFileSync, chmodSync } from 'node:fs';
 import { join } from 'node:path';
-import { tmp } from './helpers.ts';
+import { tmp, cli } from './helpers.ts';
+import { existsSync } from 'node:fs';
 import { addWorktree, git } from '../src/worktree.ts';
 import { runFast } from '../src/sensors.ts';
 import { capture } from '../src/review.ts';
@@ -102,4 +103,16 @@ test('trace + contract: supports Python (pytest -v) and Rust (cargo test) output
   const rsRows = matrix(spec, parseTap(rsOut));
   assert.equal(rsRows[0].result, 'PASS');
   assert.equal(rsRows[1].result, 'PASS');
+});
+
+test('daylight init: scaffolds .daylight/factory, daylight.yaml, prd.md, and passes config --check', () => {
+  const dir = tmp();
+  const r = cli(['init', '--stack', 'python', '--gates', '0'], { cwd: dir });
+  assert.equal(r.code, 0, r.err + r.out);
+  assert.ok(existsSync(join(dir, '.daylight/factory/skills')));
+  assert.ok(existsSync(join(dir, '.daylight/factory/rules')));
+  assert.ok(existsSync(join(dir, '.daylight/factory/config/defaults.json')));
+  assert.ok(existsSync(join(dir, 'daylight.yaml')));
+  assert.ok(existsSync(join(dir, 'prd.md')));
+  assert.equal(cli(['config', '--check'], { cwd: dir }).code, 0);
 });
