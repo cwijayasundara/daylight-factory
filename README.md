@@ -43,6 +43,14 @@ Then inside Claude Code:
 ```
 *(Omit `--agents` for 2-human-gate mode.)*
 
+## Vibe Mode: the harness on every edit
+Run `/daylight:mode on` (or `daylight mode on`) to keep the factory enforcing even when you vibe-code outside `/daylight:run`:
+- **Guidelines** from `rules/guides.md` (TDD, SOLID, SRP) are injected into every prompt.
+- **Fast sensors** (`secrets`, `complexity`, `duplication`) run on every session stop; failures are fed back so the session must fix them before it can stop.
+- The always-on guards still apply: no pushes to the default branch, no real deploys, no credential-path access, and every tool call is audited to the ledger.
+
+Turn it off with `/daylight:mode off`; check state with `/daylight:mode status`. Opt into slower sensors with `/daylight:mode on --sensors secrets,complexity,duplication,tests`.
+
 ## Headless CLI, Resume & Frozen Runs
 
 You can also run the factory directly from your terminal (same engine as `/daylight:run`):
