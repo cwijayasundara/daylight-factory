@@ -16,7 +16,8 @@ export function generatorContext(t: Pick<Task, 'acs'>, o: { spec: string; sensor
 export function tddInstruction(t: Task, cli: string, testCmd: string, mode: 'tdd' | 'run' | 'none' = tddApplies(t) ? 'tdd' : 'none'): string {
   if (mode === 'run') return '\nThis is the delivery task: it is verified by actually building and starting the service (docker compose up --build, the health command, the smoke command), not by unit tests. There is no red step and no waiver. Make it work, run those commands yourself if you can, and commit.';
   if (mode !== 'tdd') return '\nThere is no red step for this task: do not run the red command or declare a waiver. Implement the change and commit.';
-  return '\nFollow TDD: write failing tests first. Test names must contain their AC id (e.g. "AC-3 returns 404"); commit the tests, then the implementation (' + testCmd + ' runs them). The harness checks that your new tests FAIL on the unchanged base tree and PASS on yours; there is no red command and no waiver. If the behaviour already exists, still add AC-tagged tests that prove it. Stay within what you may edit.';
+  const ex = /pytest/.test(testCmd) ? 'def test_ac3_returns_404(): (or "AC-3" in docstring/parametrize id)' : /cargo/.test(testCmd) ? 'fn test_ac3_returns_404()' : '"AC-3 returns 404"';
+  return '\nFollow TDD: write failing tests first. Every test function name must contain its AC id (e.g. ' + ex + '); commit the tests, then the implementation (' + testCmd + ' runs them). The harness checks that your new tests FAIL on the unchanged base tree and PASS on yours; there is no red command and no waiver. If the behaviour already exists, still add AC-tagged tests that prove it. Stay within what you may edit.';
 }
 
 /** What the generator may touch, stated once, in the same words the harness enforces. */

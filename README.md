@@ -53,6 +53,7 @@ Then inside Claude Code:
 ## Command Reference
 | Command | Purpose |
 |---|---|
+| `/daylight:ship <idea \| docs/file> [--stack ts\|python\|rust] [--gates 0\|2]` | **One-command end-to-end:** `init` → `brainstorm` → (1 PRD approval) → auto-commit → `/daylight:goal` |
 | `/daylight:init [--stack ts\|python\|rust] [--gates 0\|2]` | Scaffold the factory into the target repo (`.daylight/factory/`, `daylight.yaml`, starter `prd.md`) |
 | `/daylight:brainstorm [topic \| docs/file] [--out prd.md]` | Phase 0: interactively brainstorm a feature/app and write a triage-validated `prd.md` |
 | `/daylight:run <prd.md> [--agents] [--resume]` | Run the full factory; self-drives gates, resumes after timeouts/escalations |

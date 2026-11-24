@@ -14,7 +14,8 @@ const free = (port: number) => new Promise<boolean>((res) => { const s = createS
 export async function preflight(cwd: string, cfg: any, o: { base: string; title?: string; docker?: string; runSensors: (cwd: string) => { ok: boolean; messages: string } }): Promise<string[]> {
   const errs: string[] = [];
   const s = o.runSensors(cwd);
-  if (!s.ok) errs.push('baseline is red before any change (' + s.messages.slice(0, 300) + '): every task would fail on pre-existing problems; fix the baseline first');
+  const emptyPytest = !s.ok && /exit 5.*no tests ran|collected 0 items/i.test(s.messages) && !/failed\b/i.test(s.messages.replace(/tests failed \(exit 5\)/i, ''));
+  if (!s.ok && !emptyPytest) errs.push('baseline is red before any change (' + s.messages.slice(0, 300) + '): every task would fail on pre-existing problems; fix the baseline first');
   if (cfg.deploy?.target === 'local') {
     const d = spawnSync(o.docker ?? process.env.DAYLIGHT_DOCKER ?? 'docker', ['info'], { cwd, encoding: 'utf8' });
     if (d.status !== 0) errs.push('docker is not available (docker info failed): start Docker before running, deploy needs it');
