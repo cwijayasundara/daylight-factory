@@ -1,6 +1,6 @@
 ---
 description: Scaffold Daylight in the current target repository (copies factory artefacts to .daylight/factory, creates daylight.yaml and starter prd.md, or runs ingest on brownfield repos).
-argument-hint: "[--stack ts|python|rust] [--gates 0|2]"
+argument-hint: "[--stack ts|python|rust] [--gates 0|2] [--github]"
 ---
 Run the Daylight initializer in the current working directory using Bash:
 

@@ -200,7 +200,7 @@ if (cmd === 'config') {
 } else if (cmd === 'init') {
   const { initRepo } = await import('./init.ts'); const { resolveConfig } = await import('./config.ts');
   const cfg = resolveConfig(process.cwd(), { config: opt('config') });
-  console.log(JSON.stringify(await initRepo(process.cwd(), cfg, { stack: opt('stack'), gates: opt('gates') }), null, 2));
+  console.log(JSON.stringify(await initRepo(process.cwd(), cfg, { stack: opt('stack'), gates: opt('gates'), github: flag('github') }), null, 2));
 } else if (cmd === 'run') {
   const { runPipeline, summarize } = await import('./pipeline.ts'); const { resolveConfig } = await import('./config.ts'); const { auditFile, runId } = await import('./lib/events.ts'); const { writeFileSync } = await import('node:fs');
   const cfg = resolveConfig(process.cwd(), { config: opt('config') });

@@ -63,7 +63,7 @@ export async function mergePr(cwd: string, cfg: any, o: { branch: string; tier: 
   const head = git(cwd, ['rev-parse', o.branch]).stdout.trim();
   const s = prSatisfied(cwd, cfg, o.tier, head);
   if (!s.ok) return { error: 'merge refused: ' + s.missing.join('; ') };
-  const r = o.local ? git(cwd, ['merge', '--no-ff', '-m', 'Merge ' + o.branch + '\n\nDaylight-Run: ' + runId(), o.branch]) : spawnSync(process.env.DAYLIGHT_GH || 'gh', ['pr', 'merge', o.branch, '--squash'], { cwd, encoding: 'utf8' });
+  const r = o.local ? git(cwd, ['merge', '--no-ff', '-m', 'Merge ' + o.branch + '\n\nDaylight-Run: ' + runId(), o.branch]) : spawnSync(process.env.DAYLIGHT_GH || 'gh', ['pr', 'merge', o.branch, '--squash', '--delete-branch'], { cwd, encoding: 'utf8' });
   if (o.local && r.status === 0) { /* merged into the checked-out base branch */ }
   if (r.status !== 0) return { error: 'gh pr merge failed: ' + r.stderr };
   if (!o.local && o.base) {
