@@ -24,31 +24,26 @@ cd /path/to/your-target-repo
 claude --plugin-dir /path/to/daylight-factory/plugin
 ```
 
-### 3. Scaffold Daylight in the target folder
-Inside Claude Code, run:
-```text
-/daylight:init --stack python --gates 0
-```
-*Options:* `--stack ts|python|rust` (auto-detected on existing repos) and `--gates 0|2` (`0` = fully unattended, `2` = human approves design & PR).
+### 3. Brainstorm until aligned, then kick off `/daylight:goal`
 
-This initializes git if needed, copies factory artefacts (`skills/`, `rules/`, `config/`) to `.daylight/factory/`, creates `daylight.yaml` (or runs `ingest` on brownfield repos), and writes a starter `prd.md`.
+The recommended lights-on workflow separates **human alignment** from **autonomous execution**:
 
-### 4. Create or brainstorm `prd.md`, commit the baseline, and run the factory
-If you don't have a PRD yet, brainstorm one interactively with Claude Code (validates via `daylight prd check` automatically):
-```text
-/daylight:brainstorm "describe your idea or point to docs/"
-```
-Then commit the baseline and run the factory:
-```bash
-git add -A && git commit -m "initial baseline"
-```
-Then inside Claude Code:
-```text
-/daylight:run prd.md --agents
-```
-*(Omit `--agents` for 2-human-gate mode. For supervised auto-resume across inner-loop escalations until done, use `/daylight:goal prd.md --agents`.)*
+1. **One-command flow (recommended):**
+   ```text
+   /daylight:ship "describe your idea or point to docs/" --stack python --gates 0
+   ```
+   This scaffolds the repo (`init`), brainstorms with you until the factory understands precisely what you want (`brainstorm` → validated `prd.md`), waits for **one PRD approval**, then auto-commits and runs `/daylight:goal` unattended to a tested, Docker-deployed app.
 
-`/daylight:run` drives **all phases itself** — triage → design → Gate 1 → plan → TDD inner loop (generator + evaluator) → sensors → judge → PR → Gate 2 → deploy → smoke → wiki — and knows how to handle every exit: it presents design/PR artefacts for your decision at human gates (`daylight gate decide ...`), auto-resumes with `--resume` after tool timeouts, and reads `.daylight/escalations/` on failures instead of improvising the phases.
+2. **Step-by-step flow:**
+   ```text
+   /daylight:init --stack python --gates 0
+   /daylight:brainstorm "describe your idea or point to docs/"
+   # review & approve prd.md, then:
+   /daylight:goal prd.md --agents
+   ```
+   *(Use `/daylight:run prd.md` without `--agents` for 2 human gates: Design + PR.)*
+
+`/daylight:goal` and `/daylight:run` drive **all phases themselves** — triage → design → Gate 1 → plan → TDD inner loop (generator + evaluator) → sensors → judge → PR → Gate 2 → deploy → smoke → wiki — keeping the lights on with a SHA-256 hash-chained audit log, deterministic sensors, and loud escalation (with escalation-seeded `--resume`) if anything truly blocks.
 
 ## Command Reference
 | Command | Purpose |
